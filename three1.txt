@@ -1,0 +1,2 @@
+def foo(par1 int:i, par2 int:j): begin end
+

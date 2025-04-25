@@ -68,7 +68,7 @@ ID          ({LETTER}|_)({LETTER}|{DIGIT}|_)*
 ")"             { return ')'; }
 "["             { return '['; }
 "]"             { return ']'; }
-"|"             { return EPIPE; }
+"|"             { return PIPE_SYMBOL; }
 
 {ID}            { yylval.str = strdup(yytext); return IDENTIFIER; }
 {DIGIT}+        { yylval.str = strdup(yytext); return INT_LITERAL; }

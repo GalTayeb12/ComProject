@@ -1,0 +1,26 @@
+def foo(par1 int:i; par2 int:j; par3 int:k): returns int
+begin
+	def fee(par1 int:l; par2 char:m; par3 real:x): returns bool
+	begin
+		return TRUE;
+	end
+	return 0;
+end
+
+def goo(par1 int:i; par2 int:j; par3 int:k):
+begin
+	def fee(par1 int:l; par2 char:m; par3 real:x): returns bool
+	begin
+	return TRUE;
+	end
+	call fee(2,3.5,0.4);
+end
+
+def _main_():
+var
+	type int:a;
+	type int:b;
+begin
+	a = foo();
+	b = goo();
+end

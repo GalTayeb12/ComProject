@@ -1,0 +1,13 @@
+
+def _main_():
+var
+	type int:a;
+begin
+	a = foo();
+end
+
+def foo(): returns int
+begin 
+	return 0;
+end
+

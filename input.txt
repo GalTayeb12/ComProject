@@ -1,5 +1,0 @@
-var
-int x = 1;
-begin
-return x;
-end

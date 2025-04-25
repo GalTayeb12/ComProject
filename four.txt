@@ -1,0 +1,23 @@
+def foo(par1 int:i; par2 int:j; par3 int:k): returns int
+var
+	type int:temp;
+begin
+	def square(par1 int:t): returns int
+	var
+		type int:temp;
+	begin
+		temp = t*t;
+		return temp;
+	end
+	total = 1;
+	return total;
+end
+
+def _main_():
+var
+	type int:a;
+	
+begin
+	a = foo();
+	
+end
