@@ -73,7 +73,6 @@ funcs : func { $$ = $1; }
       | /* empty */ { $$ = NULL; }
 ;
 
-
 func 
   : DEF IDENTIFIER '(' parameters ')' ':' RETURNS ret_type var_decls block
 {
@@ -95,7 +94,7 @@ func
     if (strcmp($2, "_main_") == 0) {
         has_main = 1;
     }
-    add_function($2); // Add function to symbol table - need to add it for nested functions too
+    add_function($2); // Add function to symbol table
     if ($7->child_count == 0)
         $$ = create_node($2, 3, $4, ret, body);
     else
@@ -186,7 +185,17 @@ optional_var_list
 ;
 
 var_decl_list : var_decl_list var_single_decl {
-    $$ = create_node("BLOCK", 2, $1, $2);
+    // Append var_single_decl to the existing block
+    if (strcmp($1->name, "BLOCK") == 0) {
+        Node* merged = create_node("BLOCK", $1->child_count + 1);
+        for (int i = 0; i < $1->child_count; i++) {
+            merged->children[i] = $1->children[i];
+        }
+        merged->children[$1->child_count] = $2;
+        $$ = merged;
+    } else {
+        $$ = create_node("BLOCK", 2, $1, $2);
+    }
 }
 | var_single_decl { $$ = create_node("BLOCK", 1, $1); }
 ;
@@ -204,6 +213,10 @@ var_single_decl : TYPE type ':' IDENTIFIER ';' {
     // Create assignment node
     $$ = create_node("=", 2, var_node, $6);
 }
+| TYPE BOOL ':' var_init_list ';' {
+    // Handle bool list initialization
+    $$ = $4;
+}
 | TYPE type ':' string_decl_list ';' {
     $$ = $4;
 }
@@ -220,7 +233,20 @@ var_init_list : IDENTIFIER ':' expr {
     sprintf(temp, "BOOL %s", $1);
     Node* var_node = create_node(temp, 0);
     Node* assign_node = create_node("=", 2, var_node, $3);
-    $$ = create_node("BLOCK", 2, assign_node, $5);
+    
+    // Check if var_init_list is already a BLOCK or a single assignment
+    if (strcmp($5->name, "BLOCK") == 0) {
+        // Create a new BLOCK with the new assignment and existing assignments
+        Node* merged = create_node("BLOCK", $5->child_count + 1);
+        merged->children[0] = assign_node;
+        for (int i = 0; i < $5->child_count; i++) {
+            merged->children[i+1] = $5->children[i];
+        }
+        $$ = merged;
+    } else {
+        // Create a new BLOCK with just the two assignments
+        $$ = create_node("BLOCK", 2, assign_node, $5);
+    }
 }
 ;
 
@@ -236,8 +262,6 @@ string_decl_list
       $$ = create_node("BLOCK", 1, $1);
   }
 ;
-
-
 
 string_decl
   : IDENTIFIER '[' INT_LITERAL ']' {
@@ -256,7 +280,6 @@ block
   : BEGIN_T inner_block END_T { $$ = $2; }
   | BEGIN_T END_T { $$ = create_node("BLOCK", 0); }
 ;
-
 
 inner_block 
   : funcs stmts {
@@ -287,22 +310,40 @@ stmts : stmt { $$ = $1; }
 ;
 
 stmt : IDENTIFIER ASSIGN expr ';' { $$ = create_node("=", 2, create_node($1, 0), $3); }
+     | IDENTIFIER '[' expr ']' ASSIGN expr ';' 
+        { 
+            // Create a node for the array element
+            Node* arr_elem = create_node("ARRAY_ELEM", 2, create_node($1, 0), $3);
+            // Create the assignment node
+            $$ = create_node("=", 2, arr_elem, $6);
+        }
      | MUL IDENTIFIER ASSIGN expr ';' { $$ = create_node("= *", 2, create_node($2, 0), $4); }
      | RETURN expr ';' { $$ = create_node("RET", 1, $2); }
-    | CALL IDENTIFIER '(' args ')' ';' 
+     | RETURN ';' { $$ = create_node("RET", 0); }
+     | CALL IDENTIFIER '(' args ')' ';' 
      { 
          $$ = create_node("CALL", 2, create_node($2, 0), $4); 
      }
      | IF expr ':' block ELSE ':' block { $$ = create_node("IF-ELSE", 3, $2, $4, $7); }
-     | IF expr ':' block { $$ = create_node("IF", 2, $2, $4); }
      | IF expr ':' block ELIF expr ':' block { $$ = create_node("IF-ELIF", 4, $2, $4, $6, $8); }
      | IF expr ':' block ELIF expr ':' block ELSE ':' block { $$ = create_node("IF-ELIF-ELSE", 6, $2, $4, $6, $8, $11); }
+     | IF expr ':' block { $$ = create_node("IF", 2, $2, $4); }
      | WHILE expr ':' block { $$ = create_node("WHILE", 2, $2, $4); }
      | block { $$ = $1; }
 ;
 
 args : expr { $$ = create_node("ARGS", 1, $1); }
-     | expr ',' args { $$ = create_node("ARGS", 2, $1, $3); }
+     | expr ',' args { 
+         if (strcmp($3->name, "ARGS") == 0) {
+             Node* merged = create_node("ARGS", 1 + $3->child_count);
+             merged->children[0] = $1;
+             for (int i = 0; i < $3->child_count; i++)
+                 merged->children[i+1] = $3->children[i];
+             $$ = merged;
+         } else {
+             $$ = create_node("ARGS", 2, $1, $3);
+         }
+     }
      | /* empty */ { $$ = create_node("ARGS NONE", 0); }
 ;
 
@@ -323,6 +364,7 @@ expr : expr ADD expr { $$ = create_node("+", 2, $1, $3); }
      | MUL IDENTIFIER { $$ = create_node("*", 1, create_node($2, 0)); }
      | ADDR IDENTIFIER { $$ = create_node("&", 1, create_node($2, 0)); }
      | IDENTIFIER { $$ = create_node($1, 0); }
+     | IDENTIFIER '[' expr ']' { $$ = create_node("ARRAY_ELEM", 2, create_node($1, 0), $3); }
      | IDENTIFIER '(' args ')' { $$ = create_node("CALL", 2, create_node($1, 0), $3); }
      | INT_LITERAL { $$ = create_node($1, 0); }
      | REAL_LITERAL { $$ = create_node($1, 0); }

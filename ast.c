@@ -83,7 +83,6 @@ void print_ast(Node* node, int depth) {
         
     if (strcmp(node->name, "BLOCK") == 0 && node->child_count == 0)
         return;
-
     
     if (strcmp(node->name, "CODE") == 0) {
         printf("(CODE\n");
@@ -100,6 +99,46 @@ void print_ast(Node* node, int depth) {
         return;
     }
     
+    // Special handling for array elements
+    if (strcmp(node->name, "ARRAY_ELEM") == 0 && node->child_count == 2) {
+        for (int i = 0; i < depth; i++)
+            printf("  ");
+        
+        if (node->children[1]->child_count == 0) {
+            // Simple index (like a[5])
+            printf("(%s[%s])\n", node->children[0]->name, node->children[1]->name);
+        } else {
+            // Complex expression index (like a[i+1])
+            printf("(%s[\n", node->children[0]->name);
+            print_ast(node->children[1], depth + 1);
+            for (int i = 0; i < depth; i++)
+                printf("  ");
+            printf("])\n");
+        }
+        return;
+    }
+    
+    // Special handling for boolean assignments in variable declarations
+    if (node->child_count == 2 && 
+        strcmp(node->name, "=") == 0 && 
+        node->children[0]->child_count == 0 && 
+        strncmp(node->children[0]->name, "BOOL ", 5) == 0) {
+        
+        for (int i = 0; i < depth; i++)
+            printf("  ");
+        
+        // Remove the "BOOL " prefix from the variable name
+        char* var_name = node->children[0]->name + 5;
+        
+        printf("(= %s\n", var_name);
+        print_ast(node->children[1], depth + 1);
+        for (int i = 0; i < depth; i++)
+            printf("  ");
+        printf(")\n");
+        return;
+    }
+    
+    // Handle standard binary operators
     if (node->child_count == 2 && (
         strcmp(node->name, "+") == 0 || 
         strcmp(node->name, "-") == 0 ||
@@ -140,6 +179,7 @@ void print_ast(Node* node, int depth) {
         return;
     }
     
+    // Handle assignments
     if (node->child_count == 2 && strcmp(node->name, "=") == 0 && node->children[0]->child_count == 0) {
         for (int i = 0; i < depth; i++)
             printf("  ");
@@ -152,8 +192,10 @@ void print_ast(Node* node, int depth) {
         return;
     }
     
-    if (node->child_count == 1 && node->children[0]->child_count == 0 && 
-        strcmp(node->name, "RET") == 0) {
+    // Handle return statements
+    if (node->child_count == 1 && 
+        strcmp(node->name, "RET") == 0 &&
+        node->children[0]->child_count == 0) {
         for (int i = 0; i < depth; i++)
             printf("  ");
         
@@ -161,6 +203,15 @@ void print_ast(Node* node, int depth) {
         return;
     }
     
+    // Handle empty return statements
+    if (node->child_count == 0 && strcmp(node->name, "RET") == 0) {
+        for (int i = 0; i < depth; i++)
+            printf("  ");
+        printf("(RET)\n");
+        return;
+    }
+    
+    // Default printing for all other nodes
     for (int i = 0; i < depth; i++)
         printf("  ");
     
@@ -182,4 +233,25 @@ void print_ast(Node* node, int depth) {
         printf("  ");
     
     printf(")\n");
+}
+
+// Free the memory used by the AST
+void free_ast(Node* node) {
+    if (!node)
+        return;
+    
+    // Free all children first
+    for (int i = 0; i < node->child_count; i++) {
+        free_ast(node->children[i]);
+    }
+    
+    // Free the children array if it exists
+    if (node->children)
+        free(node->children);
+    
+    // Free the name string
+    free(node->name);
+    
+    // Free the node itself
+    free(node);
 }

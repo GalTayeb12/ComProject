@@ -1,0 +1,16 @@
+def test_strings():
+var
+	type string:a[30],b[100]:“moshe”;
+	type char:c;
+begin
+c = 'e'; 
+c = a;
+
+(a + 4)[0] = 'e';
+
+end
+
+def _main_():
+begin
+  call test_strings();
+end
