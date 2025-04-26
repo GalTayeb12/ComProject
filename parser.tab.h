@@ -101,7 +101,8 @@ extern int yydebug;
     REAL_LITERAL = 302,            /* REAL_LITERAL  */
     CHAR_LITERAL = 303,            /* CHAR_LITERAL  */
     STRING_LITERAL = 304,          /* STRING_LITERAL  */
-    LOWER_THAN_ELSE = 305          /* LOWER_THAN_ELSE  */
+    UMINUS = 305,                  /* UMINUS  */
+    LOWER_THAN_ELSE = 306          /* LOWER_THAN_ELSE  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -110,12 +111,12 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 42 "parser.y"
+#line 116 "parser.y"
 
     char* str;
     Node* node;
 
-#line 119 "parser.tab.h"
+#line 120 "parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

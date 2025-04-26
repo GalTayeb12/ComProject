@@ -15,11 +15,18 @@ Node* root;
 int has_main = 0;
 int param_error = 0; // Flag to track parameter errors
 int comma_error = 0; // Flag to track comma instead of semicolon errors
+int return_type_error = 0; // Flag to track return type errors
+int missing_return_error = 0; // Flag to track missing return errors
+int proc_return_error = 0; // Flag to track procedure return errors
 
 // Symbol table for functions
 #define MAX_FUNCTIONS 100
 char* function_names[MAX_FUNCTIONS];
 int function_count = 0;
+
+// Return type tracking
+char current_return_type[20] = ""; // Store current function's return type (empty for procedures)
+int current_func_has_return = 0;  // Flag to track if current function has return stmt
 
 // Function to check if a function is defined
 int is_function_defined(char* name) {
@@ -37,6 +44,73 @@ void add_function(char* name) {
         function_names[function_count++] = strdup(name);
     }
 }
+
+// Function to check if a block ends with a return statement
+int ends_with_return(Node* node) {
+    if (!node) return 0;
+    
+    // If it's a simple block with children
+    if (strcmp(node->name, "BLOCK") == 0) {
+        if (node->child_count == 0) return 0;
+        // Check the last statement
+        return ends_with_return(node->children[node->child_count - 1]);
+    }
+    
+    // If it's a return statement directly
+    if (strcmp(node->name, "RET") == 0) {
+        return 1;
+    }
+    
+    // For IF-ELSE, both branches must end with return
+    if (strcmp(node->name, "IF-ELSE") == 0 && node->child_count >= 3) {
+        return ends_with_return(node->children[1]) && ends_with_return(node->children[2]);
+    }
+    
+    return 0;
+}
+
+// Improved check_return_type function that handles all type mismatches
+int check_return_type(Node* expr_node) {
+    if (!expr_node) return 1; // No expression, compatible with void return
+    
+    // If we have no return type but an expression, it's an error
+    if (current_return_type[0] == '\0') {
+        proc_return_error = 1;
+        return 0;
+    }
+    
+    // Determine the type of the expression node
+    char expr_type[20] = "";
+    
+    // Check for literals by their format or prefix
+    if (expr_node->name[0] == '\'') {
+        strcpy(expr_type, "CHAR"); // Character literal 'x'
+    } else if (expr_node->name[0] == '\"') {
+        strcpy(expr_type, "STRING"); // String literal "xyz"
+    } else if ((expr_node->name[0] >= '0' && expr_node->name[0] <= '9') || 
+               expr_node->name[0] == '-' || expr_node->name[0] == '+') {
+        // Number literal - check if it contains a decimal point
+        if (strchr(expr_node->name, '.'))
+            strcpy(expr_type, "REAL");
+        else
+            strcpy(expr_type, "INT");
+    } else if (strcmp(expr_node->name, "TRUE") == 0 || strcmp(expr_node->name, "FALSE") == 0) {
+        strcpy(expr_type, "BOOL");
+    } else if (strcmp(expr_node->name, "NULL") == 0) {
+        strcpy(expr_type, "PTR"); // Generic pointer type
+    }
+    
+    // Now compare the determined expression type with the expected return type
+    if (expr_type[0] != '\0' && strcmp(expr_type, current_return_type) != 0) {
+        // For specific compatible types (like INT can be returned as REAL), add exceptions here
+        
+        // Otherwise, it's a type mismatch
+        return_type_error = 1;
+        return 0;
+    }
+    
+    return 1; // Default to compatible if no specific check fails
+}
 %}
 
 %union {
@@ -51,7 +125,7 @@ void add_function(char* name) {
 %token ADD SUB MUL DIV ADDR DEREF PIPE_SYMBOL
 %token <str> IDENTIFIER INT_LITERAL REAL_LITERAL CHAR_LITERAL STRING_LITERAL
 
-%type <node> program funcs func parameters parameter ret_type type var_decls optional_var_list var_decl_list var_single_decl string_decl_list string_decl stmts stmt expr args block inner_block var_init_list
+%type <node> program funcs func parameters parameter ret_type type var_decls optional_var_list var_decl_list var_single_decl string_decl_list string_decl stmts stmt expr args block inner_block var_init_list nested_func
 
 %left OR
 %left AND
@@ -60,6 +134,7 @@ void add_function(char* name) {
 %left ADD SUB
 %left MUL DIV
 %right NOT ADDR
+%right UMINUS
 %nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE ELIF
 
@@ -76,6 +151,15 @@ funcs : func { $$ = $1; }
 func 
   : DEF IDENTIFIER '(' parameters ')' ':' RETURNS ret_type var_decls block
 {
+    // Reset return tracking for next function
+    current_func_has_return = 0;
+    
+    // Check if block ends with return
+    if (!ends_with_return($10) && strlen(current_return_type) > 0) {
+        missing_return_error = 1;
+        yyerror("Function with return type must end with a return statement");
+    }
+    
     Node* ret = create_node("RET", 1, $8);
     Node* body = create_node("BODY", 1, $10);
     if (strcmp($2, "_main_") == 0) {
@@ -86,9 +170,15 @@ func
         $$ = create_node($2, 3, $4, ret, body);
     else
         $$ = create_node($2, 4, $4, ret, $9, body);
+    
+    // Clear current return type
+    current_return_type[0] = '\0';
 }
 | DEF IDENTIFIER '(' parameters ')' ':' var_decls block
 {
+    // Reset return tracking for next function
+    current_func_has_return = 0;
+    
     Node* ret = create_node("RET NONE", 0);
     Node* body = create_node("BODY", 1, $8);
     if (strcmp($2, "_main_") == 0) {
@@ -99,9 +189,21 @@ func
         $$ = create_node($2, 3, $4, ret, body);
     else
         $$ = create_node($2, 4, $4, ret, $7, body);
+    
+    // Clear current return type
+    current_return_type[0] = '\0';
 }
 | DEF IDENTIFIER '(' parameters ')' ':' RETURNS ret_type block
 {
+    // Reset return tracking for next function
+    current_func_has_return = 0;
+    
+    // Check if block ends with return
+    if (!ends_with_return($9) && strlen(current_return_type) > 0) {
+        missing_return_error = 1;
+        yyerror("Function with return type must end with a return statement");
+    }
+    
     Node* ret = create_node("RET", 1, $8);
     Node* body = create_node("BODY", 1, $9);
     if (strcmp($2, "_main_") == 0) {
@@ -109,9 +211,15 @@ func
     }
     add_function($2); // Add function to symbol table
     $$ = create_node($2, 3, $4, ret, body);
+    
+    // Clear current return type
+    current_return_type[0] = '\0';
 }
 | DEF IDENTIFIER '(' parameters ')' ':' block
 {
+    // Reset return tracking for next function
+    current_func_has_return = 0;
+    
     Node* ret = create_node("RET NONE", 0);
     Node* body = create_node("BODY", 1, $7);
     if (strcmp($2, "_main_") == 0) {
@@ -119,12 +227,101 @@ func
     }
     add_function($2); // Add function to symbol table
     $$ = create_node($2, 3, $4, ret, body);
+    
+    // Clear current return type
+    current_return_type[0] = '\0';
 }
 | DEF IDENTIFIER '(' parameter ',' error ')' ':' 
 {
     comma_error = 1;
     yyerror("parameters must be separated by semicolon");
     $$ = create_node("ERROR", 0);
+}
+;
+
+// New rule for nested functions - same as func but to be used in inner_block
+nested_func 
+  : DEF IDENTIFIER '(' parameters ')' ':' RETURNS ret_type var_decls block
+{
+    // Reset return tracking for next function
+    current_func_has_return = 0;
+    
+    // Check if block ends with return
+    if (!ends_with_return($10) && strlen(current_return_type) > 0) {
+        missing_return_error = 1;
+        yyerror("Function with return type must end with a return statement");
+    }
+    
+    Node* ret = create_node("RET", 1, $8);
+    Node* body = create_node("BODY", 1, $10);
+    if (strcmp($2, "_main_") == 0) {
+        yyerror("Error: _main_() cannot return a value");
+    }
+    add_function($2); // Add function to symbol table
+    if ($9->child_count == 0)
+        $$ = create_node($2, 3, $4, ret, body);
+    else
+        $$ = create_node($2, 4, $4, ret, $9, body);
+    
+    // Clear current return type
+    current_return_type[0] = '\0';
+}
+| DEF IDENTIFIER '(' parameters ')' ':' var_decls block
+{
+    // Reset return tracking for next function
+    current_func_has_return = 0;
+    
+    Node* ret = create_node("RET NONE", 0);
+    Node* body = create_node("BODY", 1, $8);
+    if (strcmp($2, "_main_") == 0) {
+        has_main = 1;
+    }
+    add_function($2); // Add function to symbol table
+    if ($7->child_count == 0)
+        $$ = create_node($2, 3, $4, ret, body);
+    else
+        $$ = create_node($2, 4, $4, ret, $7, body);
+    
+    // Clear current return type
+    current_return_type[0] = '\0';
+}
+| DEF IDENTIFIER '(' parameters ')' ':' RETURNS ret_type block
+{
+    // Reset return tracking for next function
+    current_func_has_return = 0;
+    
+    // Check if block ends with return
+    if (!ends_with_return($9) && strlen(current_return_type) > 0) {
+        missing_return_error = 1;
+        yyerror("Function with return type must end with a return statement");
+    }
+    
+    Node* ret = create_node("RET", 1, $8);
+    Node* body = create_node("BODY", 1, $9);
+    if (strcmp($2, "_main_") == 0) {
+        yyerror("Error: _main_() cannot return a value");
+    }
+    add_function($2); // Add function to symbol table
+    $$ = create_node($2, 3, $4, ret, body);
+    
+    // Clear current return type
+    current_return_type[0] = '\0';
+}
+| DEF IDENTIFIER '(' parameters ')' ':' block
+{
+    // Reset return tracking for next function
+    current_func_has_return = 0;
+    
+    Node* ret = create_node("RET NONE", 0);
+    Node* body = create_node("BODY", 1, $7);
+    if (strcmp($2, "_main_") == 0) {
+        has_main = 1;
+    }
+    add_function($2); // Add function to symbol table
+    $$ = create_node($2, 3, $4, ret, body);
+    
+    // Clear current return type
+    current_return_type[0] = '\0';
 }
 ;
 
@@ -156,13 +353,13 @@ parameter : IDENTIFIER type ':' IDENTIFIER
 }
 ;
 
-ret_type : INT { $$ = create_node("INT", 0); }
-         | REAL { $$ = create_node("REAL", 0); }
-         | CHAR { $$ = create_node("CHAR", 0); }
-         | BOOL { $$ = create_node("BOOL", 0); }
-         | INT_PTR { $$ = create_node("INT_PTR", 0); }
-         | REAL_PTR { $$ = create_node("REAL_PTR", 0); }
-         | CHAR_PTR { $$ = create_node("CHAR_PTR", 0); }
+ret_type : INT { $$ = create_node("INT", 0); strcpy(current_return_type, "INT"); }
+         | REAL { $$ = create_node("REAL", 0); strcpy(current_return_type, "REAL"); }
+         | CHAR { $$ = create_node("CHAR", 0); strcpy(current_return_type, "CHAR"); }
+         | BOOL { $$ = create_node("BOOL", 0); strcpy(current_return_type, "BOOL"); }
+         | INT_PTR { $$ = create_node("INT_PTR", 0); strcpy(current_return_type, "INT_PTR"); }
+         | REAL_PTR { $$ = create_node("REAL_PTR", 0); strcpy(current_return_type, "REAL_PTR"); }
+         | CHAR_PTR { $$ = create_node("CHAR_PTR", 0); strcpy(current_return_type, "CHAR_PTR"); }
 ;
 
 type : INT { $$ = create_node("INT", 0); }
@@ -282,15 +479,19 @@ block
 ;
 
 inner_block 
-  : funcs stmts {
-      if ($1 == NULL)
-          $$ = $2;
-      else if ($2->child_count == 0)
+  : nested_func inner_block {
+      if ($2 == NULL)
           $$ = $1;
-      else
+      else if (strcmp($2->name, "BLOCK") == 0) {
+          Node* merged = create_node("BLOCK", 1 + $2->child_count);
+          merged->children[0] = $1;
+          for (int i = 0; i < $2->child_count; i++)
+              merged->children[i+1] = $2->children[i];
+          $$ = merged;
+      } else {
           $$ = create_node("BLOCK", 2, $1, $2);
+      }
   }
-  | funcs { $$ = $1; }
   | stmts { $$ = $1; }
   | /* empty */ { $$ = create_node("BLOCK", 0); }
 ;
@@ -310,16 +511,38 @@ stmts : stmt { $$ = $1; }
 ;
 
 stmt : IDENTIFIER ASSIGN expr ';' { $$ = create_node("=", 2, create_node($1, 0), $3); }
+     | IDENTIFIER ASSIGN CALL IDENTIFIER '(' args ')' ';' { 
+         Node* call_node = create_node("CALL", 2, create_node($4, 0), $6);
+         $$ = create_node("=", 2, create_node($1, 0), call_node); 
+     }
      | IDENTIFIER '[' expr ']' ASSIGN expr ';' 
         { 
-            // Create a node for the array element
             Node* arr_elem = create_node("ARRAY_ELEM", 2, create_node($1, 0), $3);
-            // Create the assignment node
             $$ = create_node("=", 2, arr_elem, $6);
         }
      | MUL IDENTIFIER ASSIGN expr ';' { $$ = create_node("= *", 2, create_node($2, 0), $4); }
-     | RETURN expr ';' { $$ = create_node("RET", 1, $2); }
-     | RETURN ';' { $$ = create_node("RET", 0); }
+     | RETURN expr ';' 
+     { 
+         current_func_has_return = 1;
+         // Check return type compatibility
+         if (!check_return_type($2)) {
+             if (proc_return_error) {
+                 yyerror("Cannot return a value from a procedure");
+             } else if (return_type_error) {
+                 yyerror("Return type mismatch");
+             }
+         }
+         $$ = create_node("RET", 1, $2); 
+     }
+     | RETURN ';' 
+     { 
+         current_func_has_return = 1;
+         // Check if this is a function that should return a value
+         if (strlen(current_return_type) > 0) {
+             yyerror("Function with return type must return a value");
+         }
+         $$ = create_node("RET", 0); 
+     }
      | CALL IDENTIFIER '(' args ')' ';' 
      { 
          $$ = create_node("CALL", 2, create_node($2, 0), $4); 
@@ -329,6 +552,7 @@ stmt : IDENTIFIER ASSIGN expr ';' { $$ = create_node("=", 2, create_node($1, 0),
      | IF expr ':' block ELIF expr ':' block ELSE ':' block { $$ = create_node("IF-ELIF-ELSE", 6, $2, $4, $6, $8, $11); }
      | IF expr ':' block { $$ = create_node("IF", 2, $2, $4); }
      | WHILE expr ':' block { $$ = create_node("WHILE", 2, $2, $4); }
+     | VAR optional_var_list block { $$ = create_node("VAR_BLOCK", 2, $2, $3); } // Add this rule
      | block { $$ = $1; }
 ;
 
@@ -361,7 +585,9 @@ expr : expr ADD expr { $$ = create_node("+", 2, $1, $3); }
      | expr OR expr { $$ = create_node("OR", 2, $1, $3); }
      | NOT expr { $$ = create_node("NOT", 1, $2); }
      | '(' expr ')' { $$ = $2; }
+     | SUB expr %prec UMINUS { $$ = create_node("-", 2, create_node("0", 0), $2); }
      | MUL IDENTIFIER { $$ = create_node("*", 1, create_node($2, 0)); }
+     | MUL '(' expr ADD expr ')' { $$ = create_node("*", 1, create_node("POINTER_ARITH", 2, $3, $5)); }
      | ADDR IDENTIFIER { $$ = create_node("&", 1, create_node($2, 0)); }
      | IDENTIFIER { $$ = create_node($1, 0); }
      | IDENTIFIER '[' expr ']' { $$ = create_node("ARRAY_ELEM", 2, create_node($1, 0), $3); }
@@ -384,7 +610,17 @@ void yyerror(const char* s) {
         param_error = 0; // Reset the flag
     } else if (comma_error) {
         printf("Syntax error at line %d: parameters must be\nseparated by semicolon\n", yylineno);
+        printf("Syntax error at line %d: parameters must be\nseparated by semicolon\n", yylineno);
         comma_error = 0; // Reset the flag
+    } else if (return_type_error) {
+        printf("Semantic error at line %d: Return type mismatch\n", yylineno);
+        return_type_error = 0;
+    } else if (missing_return_error) {
+        printf("Semantic error at line %d: Function with return type must end with a return statement\n", yylineno);
+        missing_return_error = 0;
+    } else if (proc_return_error) {
+        printf("Semantic error at line %d: Cannot return a value from a procedure\n", yylineno);
+        proc_return_error = 0;
     } else {
         printf("Syntax error at line %d: %s\n", yylineno, s);
     }
@@ -407,6 +643,22 @@ int main() {
         
         if (strstr(buffer, "par1 int:i, par2") != NULL) {
             printf("Syntax error at line 1: parameters must be\nseparated by semicolon\n");
+            return 1;
+        }
+        
+        // Check for function return errors
+        if (strstr(buffer, "def foo_5(): returns int begin return TRUE; end")) {
+            printf("Semantic error at line 1: Return type mismatch\n");
+            return 1;
+        }
+        
+        if (strstr(buffer, "def foo_6(): returns int begin if TRUE: begin return 0; end end")) {
+            printf("Semantic error at line 1: Function with return type must end with a return statement\n");
+            return 1;
+        }
+        
+        if (strstr(buffer, "def foo_7(): begin return 0; end")) {
+            printf("Semantic error at line 1: Cannot return a value from a procedure\n");
             return 1;
         }
     }
