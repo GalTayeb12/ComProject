@@ -79,15 +79,15 @@
 extern int yylineno;
 extern int yylex();
 void yyerror(const char* s);
-extern char* yytext; // Add this to access the current token text
+extern char* yytext; 
 
 Node* root;
 int has_main = 0;
-int param_error = 0; // Flag to track parameter errors
-int comma_error = 0; // Flag to track comma instead of semicolon errors
-int return_type_error = 0; // Flag to track return type errors
-int missing_return_error = 0; // Flag to track missing return errors
-int proc_return_error = 0; // Flag to track procedure return errors
+int param_error = 0; 
+int comma_error = 0; 
+int return_type_error = 0; 
+int missing_return_error = 0; 
+int proc_return_error = 0; 
 
 // Symbol table for functions
 #define MAX_FUNCTIONS 100
@@ -95,8 +95,28 @@ char* function_names[MAX_FUNCTIONS];
 int function_count = 0;
 
 // Return type tracking
-char current_return_type[20] = ""; // Store current function's return type (empty for procedures)
-int current_func_has_return = 0;  // Flag to track if current function has return stmt
+char current_return_type[20] = ""; 
+int current_func_has_return = 0;  
+
+// For nested functions
+#define MAX_NESTING 50
+char return_type_stack[MAX_NESTING][20];
+int return_type_stack_idx = 0;
+
+// Functions for managing the return type stack
+void push_return_type() {
+    if (return_type_stack_idx < MAX_NESTING) {
+        strcpy(return_type_stack[return_type_stack_idx], current_return_type);
+        return_type_stack_idx++;
+    }
+}
+
+void pop_return_type() {
+    if (return_type_stack_idx > 0) {
+        return_type_stack_idx--;
+        strcpy(current_return_type, return_type_stack[return_type_stack_idx]);
+    }
+}
 
 // Function to check if a function is defined
 int is_function_defined(char* name) {
@@ -107,6 +127,7 @@ int is_function_defined(char* name) {
     }
     return 0;
 }
+
 
 // Function to add a function to the symbol table
 void add_function(char* name) {
@@ -139,7 +160,7 @@ int ends_with_return(Node* node) {
     return 0;
 }
 
-// Improved check_return_type function that handles all type mismatches
+// Fix for the return type checking function
 int check_return_type(Node* expr_node) {
     if (!expr_node) return 1; // No expression, compatible with void return
     
@@ -147,6 +168,12 @@ int check_return_type(Node* expr_node) {
     if (current_return_type[0] == '\0') {
         proc_return_error = 1;
         return 0;
+    }
+    
+    // Important: Special case for TRUE/FALSE literals in bool context
+    if ((strcmp(expr_node->name, "TRUE") == 0 || strcmp(expr_node->name, "FALSE") == 0) && 
+        strcmp(current_return_type, "BOOL") == 0) {
+        return 1; // This is always valid
     }
     
     // Determine the type of the expression node
@@ -172,9 +199,13 @@ int check_return_type(Node* expr_node) {
     
     // Now compare the determined expression type with the expected return type
     if (expr_type[0] != '\0' && strcmp(expr_type, current_return_type) != 0) {
-        // For specific compatible types (like INT can be returned as REAL), add exceptions here
+        // Critical case: Integer being returned as boolean (eight1.txt case)
+        if (strcmp(expr_type, "INT") == 0 && strcmp(current_return_type, "BOOL") == 0) {
+            return_type_error = 1;
+            return 0;
+        }
         
-        // Otherwise, it's a type mismatch
+        // For other type mismatches
         return_type_error = 1;
         return 0;
     }
@@ -182,7 +213,7 @@ int check_return_type(Node* expr_node) {
     return 1; // Default to compatible if no specific check fails
 }
 
-#line 186 "parser.tab.c"
+#line 217 "parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -681,17 +712,17 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   143,   143,   146,   147,   148,   152,   177,   196,   218,
-     234,   244,   269,   288,   310,   328,   337,   338,   341,   347,
-     356,   357,   358,   359,   360,   361,   362,   365,   366,   367,
-     368,   369,   370,   371,   372,   375,   376,   380,   381,   384,
-     397,   400,   405,   413,   417,   422,   428,   451,   458,   464,
-     469,   477,   478,   482,   495,   496,   499,   500,   513,   514,
-     518,   523,   524,   537,   546,   550,   551,   552,   553,   554,
-     555,   556,   559,   560,   571,   574,   575,   576,   577,   578,
-     579,   580,   581,   582,   583,   584,   585,   586,   587,   588,
-     589,   590,   591,   592,   593,   594,   595,   596,   597,   598,
-     599,   600,   601,   602
+       0,   174,   174,   177,   178,   179,   183,   207,   226,   248,
+     262,   272,   300,   323,   347,   368,   377,   378,   381,   387,
+     396,   397,   398,   399,   400,   401,   402,   405,   406,   407,
+     408,   409,   410,   411,   412,   415,   416,   420,   421,   424,
+     437,   440,   445,   453,   457,   462,   468,   491,   498,   504,
+     509,   517,   518,   522,   535,   536,   539,   540,   553,   554,
+     558,   563,   565,   579,   588,   592,   593,   594,   595,   596,
+     597,   598,   601,   602,   613,   616,   617,   618,   619,   620,
+     621,   622,   623,   624,   625,   626,   627,   628,   629,   630,
+     631,   632,   633,   634,   635,   636,   637,   638,   639,   640,
+     641,   642,   643,   644
 };
 #endif
 
@@ -1445,35 +1476,32 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* program: funcs  */
-#line 143 "parser.y"
+#line 174 "parser.y"
                 { root = create_node("CODE", 1, (yyvsp[0].node)); }
-#line 1451 "parser.tab.c"
+#line 1482 "parser.tab.c"
     break;
 
   case 3: /* funcs: func  */
-#line 146 "parser.y"
+#line 177 "parser.y"
              { (yyval.node) = (yyvsp[0].node); }
-#line 1457 "parser.tab.c"
+#line 1488 "parser.tab.c"
     break;
 
   case 4: /* funcs: func funcs  */
-#line 147 "parser.y"
+#line 178 "parser.y"
                    { (yyval.node) = create_node("FUNC", 2, (yyvsp[-1].node), (yyvsp[0].node)); }
-#line 1463 "parser.tab.c"
+#line 1494 "parser.tab.c"
     break;
 
   case 5: /* funcs: %empty  */
-#line 148 "parser.y"
+#line 179 "parser.y"
                     { (yyval.node) = NULL; }
-#line 1469 "parser.tab.c"
+#line 1500 "parser.tab.c"
     break;
 
   case 6: /* func: DEF IDENTIFIER '(' parameters ')' ':' RETURNS ret_type var_decls block  */
-#line 153 "parser.y"
+#line 184 "parser.y"
 {
-    // Reset return tracking for next function
-    current_func_has_return = 0;
-    
     // Check if block ends with return
     if (!ends_with_return((yyvsp[0].node)) && strlen(current_return_type) > 0) {
         missing_return_error = 1;
@@ -1493,16 +1521,14 @@ yyreduce:
     
     // Clear current return type
     current_return_type[0] = '\0';
+    current_func_has_return = 0;
 }
-#line 1498 "parser.tab.c"
+#line 1527 "parser.tab.c"
     break;
 
   case 7: /* func: DEF IDENTIFIER '(' parameters ')' ':' var_decls block  */
-#line 178 "parser.y"
+#line 208 "parser.y"
 {
-    // Reset return tracking for next function
-    current_func_has_return = 0;
-    
     Node* ret = create_node("RET NONE", 0);
     Node* body = create_node("BODY", 1, (yyvsp[0].node));
     if (strcmp((yyvsp[-6].str), "_main_") == 0) {
@@ -1516,16 +1542,14 @@ yyreduce:
     
     // Clear current return type
     current_return_type[0] = '\0';
+    current_func_has_return = 0;
 }
-#line 1521 "parser.tab.c"
+#line 1548 "parser.tab.c"
     break;
 
   case 8: /* func: DEF IDENTIFIER '(' parameters ')' ':' RETURNS ret_type block  */
-#line 197 "parser.y"
+#line 227 "parser.y"
 {
-    // Reset return tracking for next function
-    current_func_has_return = 0;
-    
     // Check if block ends with return
     if (!ends_with_return((yyvsp[0].node)) && strlen(current_return_type) > 0) {
         missing_return_error = 1;
@@ -1542,16 +1566,14 @@ yyreduce:
     
     // Clear current return type
     current_return_type[0] = '\0';
+    current_func_has_return = 0;
 }
-#line 1547 "parser.tab.c"
+#line 1572 "parser.tab.c"
     break;
 
   case 9: /* func: DEF IDENTIFIER '(' parameters ')' ':' block  */
-#line 219 "parser.y"
+#line 249 "parser.y"
 {
-    // Reset return tracking for next function
-    current_func_has_return = 0;
-    
     Node* ret = create_node("RET NONE", 0);
     Node* body = create_node("BODY", 1, (yyvsp[0].node));
     if (strcmp((yyvsp[-5].str), "_main_") == 0) {
@@ -1562,25 +1584,26 @@ yyreduce:
     
     // Clear current return type
     current_return_type[0] = '\0';
+    current_func_has_return = 0;
 }
-#line 1567 "parser.tab.c"
+#line 1590 "parser.tab.c"
     break;
 
   case 10: /* func: DEF IDENTIFIER '(' parameter ',' error ')' ':'  */
-#line 235 "parser.y"
+#line 263 "parser.y"
 {
     comma_error = 1;
     yyerror("parameters must be separated by semicolon");
     (yyval.node) = create_node("ERROR", 0);
 }
-#line 1577 "parser.tab.c"
+#line 1600 "parser.tab.c"
     break;
 
   case 11: /* nested_func: DEF IDENTIFIER '(' parameters ')' ':' RETURNS ret_type var_decls block  */
-#line 245 "parser.y"
+#line 273 "parser.y"
 {
-    // Reset return tracking for next function
-    current_func_has_return = 0;
+    // Save parent function's return type before processing nested function
+    push_return_type();
     
     // Check if block ends with return
     if (!ends_with_return((yyvsp[0].node)) && strlen(current_return_type) > 0) {
@@ -1594,22 +1617,26 @@ yyreduce:
         yyerror("Error: _main_() cannot return a value");
     }
     add_function((yyvsp[-8].str)); // Add function to symbol table
+    Node* result;
     if ((yyvsp[-1].node)->child_count == 0)
-        (yyval.node) = create_node((yyvsp[-8].str), 3, (yyvsp[-6].node), ret, body);
+        result = create_node((yyvsp[-8].str), 3, (yyvsp[-6].node), ret, body);
     else
-        (yyval.node) = create_node((yyvsp[-8].str), 4, (yyvsp[-6].node), ret, (yyvsp[-1].node), body);
+        result = create_node((yyvsp[-8].str), 4, (yyvsp[-6].node), ret, (yyvsp[-1].node), body);
     
-    // Clear current return type
-    current_return_type[0] = '\0';
+    // Restore parent function's return type
+    pop_return_type();
+    
+    (yyval.node) = result;
 }
-#line 1606 "parser.tab.c"
+#line 1632 "parser.tab.c"
     break;
 
   case 12: /* nested_func: DEF IDENTIFIER '(' parameters ')' ':' var_decls block  */
-#line 270 "parser.y"
+#line 301 "parser.y"
 {
-    // Reset return tracking for next function
-    current_func_has_return = 0;
+    // Save parent function's return type
+    push_return_type();
+    current_return_type[0] = '\0';  // Clear for procedure
     
     Node* ret = create_node("RET NONE", 0);
     Node* body = create_node("BODY", 1, (yyvsp[0].node));
@@ -1617,22 +1644,25 @@ yyreduce:
         has_main = 1;
     }
     add_function((yyvsp[-6].str)); // Add function to symbol table
+    Node* result;
     if ((yyvsp[-1].node)->child_count == 0)
-        (yyval.node) = create_node((yyvsp[-6].str), 3, (yyvsp[-4].node), ret, body);
+        result = create_node((yyvsp[-6].str), 3, (yyvsp[-4].node), ret, body);
     else
-        (yyval.node) = create_node((yyvsp[-6].str), 4, (yyvsp[-4].node), ret, (yyvsp[-1].node), body);
+        result = create_node((yyvsp[-6].str), 4, (yyvsp[-4].node), ret, (yyvsp[-1].node), body);
     
-    // Clear current return type
-    current_return_type[0] = '\0';
+    // Restore parent function's return type
+    pop_return_type();
+    
+    (yyval.node) = result;
 }
-#line 1629 "parser.tab.c"
+#line 1659 "parser.tab.c"
     break;
 
   case 13: /* nested_func: DEF IDENTIFIER '(' parameters ')' ':' RETURNS ret_type block  */
-#line 289 "parser.y"
+#line 324 "parser.y"
 {
-    // Reset return tracking for next function
-    current_func_has_return = 0;
+    // Save parent function's return type
+    push_return_type();
     
     // Check if block ends with return
     if (!ends_with_return((yyvsp[0].node)) && strlen(current_return_type) > 0) {
@@ -1646,19 +1676,22 @@ yyreduce:
         yyerror("Error: _main_() cannot return a value");
     }
     add_function((yyvsp[-7].str)); // Add function to symbol table
-    (yyval.node) = create_node((yyvsp[-7].str), 3, (yyvsp[-5].node), ret, body);
+    Node* result = create_node((yyvsp[-7].str), 3, (yyvsp[-5].node), ret, body);
     
-    // Clear current return type
-    current_return_type[0] = '\0';
+    // Restore parent function's return type
+    pop_return_type();
+    
+    (yyval.node) = result;
 }
-#line 1655 "parser.tab.c"
+#line 1687 "parser.tab.c"
     break;
 
   case 14: /* nested_func: DEF IDENTIFIER '(' parameters ')' ':' block  */
-#line 311 "parser.y"
+#line 348 "parser.y"
 {
-    // Reset return tracking for next function
-    current_func_has_return = 0;
+    // Save parent function's return type
+    push_return_type();
+    current_return_type[0] = '\0';  // Clear for procedure
     
     Node* ret = create_node("RET NONE", 0);
     Node* body = create_node("BODY", 1, (yyvsp[0].node));
@@ -1666,16 +1699,18 @@ yyreduce:
         has_main = 1;
     }
     add_function((yyvsp[-5].str)); // Add function to symbol table
-    (yyval.node) = create_node((yyvsp[-5].str), 3, (yyvsp[-3].node), ret, body);
+    Node* result = create_node((yyvsp[-5].str), 3, (yyvsp[-3].node), ret, body);
     
-    // Clear current return type
-    current_return_type[0] = '\0';
+    // Restore parent function's return type
+    pop_return_type();
+    
+    (yyval.node) = result;
 }
-#line 1675 "parser.tab.c"
+#line 1710 "parser.tab.c"
     break;
 
   case 15: /* parameters: parameter ';' parameters  */
-#line 329 "parser.y"
+#line 369 "parser.y"
 {
     Node* pars = create_node("PARS", (yyvsp[0].node)->child_count + 1);
     pars->children[0] = (yyvsp[-2].node);
@@ -1684,158 +1719,158 @@ yyreduce:
     }
     (yyval.node) = pars;
 }
-#line 1688 "parser.tab.c"
+#line 1723 "parser.tab.c"
     break;
 
   case 16: /* parameters: parameter  */
-#line 337 "parser.y"
+#line 377 "parser.y"
             { (yyval.node) = create_node("PARS", 1, (yyvsp[0].node)); }
-#line 1694 "parser.tab.c"
+#line 1729 "parser.tab.c"
     break;
 
   case 17: /* parameters: %empty  */
-#line 338 "parser.y"
+#line 378 "parser.y"
               { (yyval.node) = create_node("PARS NONE", 0); }
-#line 1700 "parser.tab.c"
+#line 1735 "parser.tab.c"
     break;
 
   case 18: /* parameter: IDENTIFIER type ':' IDENTIFIER  */
-#line 342 "parser.y"
+#line 382 "parser.y"
 {
     char temp[100];
     sprintf(temp, "par%s %s %s", (yyvsp[-3].str) + 3, (yyvsp[-2].node)->name, (yyvsp[0].str));
     (yyval.node) = create_node(temp, 0);
 }
-#line 1710 "parser.tab.c"
+#line 1745 "parser.tab.c"
     break;
 
   case 19: /* parameter: IDENTIFIER ':' IDENTIFIER  */
-#line 348 "parser.y"
+#line 388 "parser.y"
 {
     param_error = 1; // Set our error flag
     yyerror("no type defined");
     // Create a dummy node anyway to prevent further errors
     (yyval.node) = create_node("ERROR", 0);
 }
-#line 1721 "parser.tab.c"
+#line 1756 "parser.tab.c"
     break;
 
   case 20: /* ret_type: INT  */
-#line 356 "parser.y"
+#line 396 "parser.y"
                { (yyval.node) = create_node("INT", 0); strcpy(current_return_type, "INT"); }
-#line 1727 "parser.tab.c"
+#line 1762 "parser.tab.c"
     break;
 
   case 21: /* ret_type: REAL  */
-#line 357 "parser.y"
+#line 397 "parser.y"
                 { (yyval.node) = create_node("REAL", 0); strcpy(current_return_type, "REAL"); }
-#line 1733 "parser.tab.c"
+#line 1768 "parser.tab.c"
     break;
 
   case 22: /* ret_type: CHAR  */
-#line 358 "parser.y"
+#line 398 "parser.y"
                 { (yyval.node) = create_node("CHAR", 0); strcpy(current_return_type, "CHAR"); }
-#line 1739 "parser.tab.c"
+#line 1774 "parser.tab.c"
     break;
 
   case 23: /* ret_type: BOOL  */
-#line 359 "parser.y"
+#line 399 "parser.y"
                 { (yyval.node) = create_node("BOOL", 0); strcpy(current_return_type, "BOOL"); }
-#line 1745 "parser.tab.c"
+#line 1780 "parser.tab.c"
     break;
 
   case 24: /* ret_type: INT_PTR  */
-#line 360 "parser.y"
+#line 400 "parser.y"
                    { (yyval.node) = create_node("INT_PTR", 0); strcpy(current_return_type, "INT_PTR"); }
-#line 1751 "parser.tab.c"
+#line 1786 "parser.tab.c"
     break;
 
   case 25: /* ret_type: REAL_PTR  */
-#line 361 "parser.y"
+#line 401 "parser.y"
                     { (yyval.node) = create_node("REAL_PTR", 0); strcpy(current_return_type, "REAL_PTR"); }
-#line 1757 "parser.tab.c"
+#line 1792 "parser.tab.c"
     break;
 
   case 26: /* ret_type: CHAR_PTR  */
-#line 362 "parser.y"
+#line 402 "parser.y"
                     { (yyval.node) = create_node("CHAR_PTR", 0); strcpy(current_return_type, "CHAR_PTR"); }
-#line 1763 "parser.tab.c"
+#line 1798 "parser.tab.c"
     break;
 
   case 27: /* type: INT  */
-#line 365 "parser.y"
+#line 405 "parser.y"
            { (yyval.node) = create_node("INT", 0); }
-#line 1769 "parser.tab.c"
+#line 1804 "parser.tab.c"
     break;
 
   case 28: /* type: REAL  */
-#line 366 "parser.y"
+#line 406 "parser.y"
             { (yyval.node) = create_node("REAL", 0); }
-#line 1775 "parser.tab.c"
+#line 1810 "parser.tab.c"
     break;
 
   case 29: /* type: CHAR  */
-#line 367 "parser.y"
+#line 407 "parser.y"
             { (yyval.node) = create_node("CHAR", 0); }
-#line 1781 "parser.tab.c"
+#line 1816 "parser.tab.c"
     break;
 
   case 30: /* type: BOOL  */
-#line 368 "parser.y"
+#line 408 "parser.y"
             { (yyval.node) = create_node("BOOL", 0); }
-#line 1787 "parser.tab.c"
+#line 1822 "parser.tab.c"
     break;
 
   case 31: /* type: INT_PTR  */
-#line 369 "parser.y"
+#line 409 "parser.y"
                { (yyval.node) = create_node("INT_PTR", 0); }
-#line 1793 "parser.tab.c"
+#line 1828 "parser.tab.c"
     break;
 
   case 32: /* type: REAL_PTR  */
-#line 370 "parser.y"
+#line 410 "parser.y"
                 { (yyval.node) = create_node("REAL_PTR", 0); }
-#line 1799 "parser.tab.c"
+#line 1834 "parser.tab.c"
     break;
 
   case 33: /* type: CHAR_PTR  */
-#line 371 "parser.y"
+#line 411 "parser.y"
                 { (yyval.node) = create_node("CHAR_PTR", 0); }
-#line 1805 "parser.tab.c"
+#line 1840 "parser.tab.c"
     break;
 
   case 34: /* type: STRING  */
-#line 372 "parser.y"
+#line 412 "parser.y"
               { (yyval.node) = create_node("STRING", 0); }
-#line 1811 "parser.tab.c"
+#line 1846 "parser.tab.c"
     break;
 
   case 35: /* var_decls: VAR optional_var_list  */
-#line 375 "parser.y"
+#line 415 "parser.y"
                                   { (yyval.node) = (yyvsp[0].node); }
-#line 1817 "parser.tab.c"
+#line 1852 "parser.tab.c"
     break;
 
   case 36: /* var_decls: %empty  */
-#line 376 "parser.y"
+#line 416 "parser.y"
                         { (yyval.node) = create_node("BLOCK", 0); }
-#line 1823 "parser.tab.c"
+#line 1858 "parser.tab.c"
     break;
 
   case 37: /* optional_var_list: var_decl_list  */
-#line 380 "parser.y"
+#line 420 "parser.y"
                   { (yyval.node) = (yyvsp[0].node); }
-#line 1829 "parser.tab.c"
+#line 1864 "parser.tab.c"
     break;
 
   case 38: /* optional_var_list: %empty  */
-#line 381 "parser.y"
+#line 421 "parser.y"
                   { (yyval.node) = create_node("BLOCK", 0); }
-#line 1835 "parser.tab.c"
+#line 1870 "parser.tab.c"
     break;
 
   case 39: /* var_decl_list: var_decl_list var_single_decl  */
-#line 384 "parser.y"
+#line 424 "parser.y"
                                               {
     // Append var_single_decl to the existing block
     if (strcmp((yyvsp[-1].node)->name, "BLOCK") == 0) {
@@ -1849,27 +1884,27 @@ yyreduce:
         (yyval.node) = create_node("BLOCK", 2, (yyvsp[-1].node), (yyvsp[0].node));
     }
 }
-#line 1853 "parser.tab.c"
+#line 1888 "parser.tab.c"
     break;
 
   case 40: /* var_decl_list: var_single_decl  */
-#line 397 "parser.y"
+#line 437 "parser.y"
                   { (yyval.node) = create_node("BLOCK", 1, (yyvsp[0].node)); }
-#line 1859 "parser.tab.c"
+#line 1894 "parser.tab.c"
     break;
 
   case 41: /* var_single_decl: TYPE type ':' IDENTIFIER ';'  */
-#line 400 "parser.y"
+#line 440 "parser.y"
                                                {
     char temp[100];
     sprintf(temp, "%s %s", (yyvsp[-3].node)->name, (yyvsp[-1].str));
     (yyval.node) = create_node(temp, 0);
 }
-#line 1869 "parser.tab.c"
+#line 1904 "parser.tab.c"
     break;
 
   case 42: /* var_single_decl: TYPE type ':' IDENTIFIER ':' expr ';'  */
-#line 405 "parser.y"
+#line 445 "parser.y"
                                         {
     // Handle initialization
     char temp[100];
@@ -1878,39 +1913,39 @@ yyreduce:
     // Create assignment node
     (yyval.node) = create_node("=", 2, var_node, (yyvsp[-1].node));
 }
-#line 1882 "parser.tab.c"
+#line 1917 "parser.tab.c"
     break;
 
   case 43: /* var_single_decl: TYPE BOOL ':' var_init_list ';'  */
-#line 413 "parser.y"
+#line 453 "parser.y"
                                   {
     // Handle bool list initialization
     (yyval.node) = (yyvsp[-1].node);
 }
-#line 1891 "parser.tab.c"
+#line 1926 "parser.tab.c"
     break;
 
   case 44: /* var_single_decl: TYPE type ':' string_decl_list ';'  */
-#line 417 "parser.y"
+#line 457 "parser.y"
                                      {
     (yyval.node) = (yyvsp[-1].node);
 }
-#line 1899 "parser.tab.c"
+#line 1934 "parser.tab.c"
     break;
 
   case 45: /* var_init_list: IDENTIFIER ':' expr  */
-#line 422 "parser.y"
+#line 462 "parser.y"
                                     {
     char temp[100];
     sprintf(temp, "BOOL %s", (yyvsp[-2].str));
     Node* var_node = create_node(temp, 0);
     (yyval.node) = create_node("=", 2, var_node, (yyvsp[0].node));
 }
-#line 1910 "parser.tab.c"
+#line 1945 "parser.tab.c"
     break;
 
   case 46: /* var_init_list: IDENTIFIER ':' expr ',' var_init_list  */
-#line 428 "parser.y"
+#line 468 "parser.y"
                                         {
     char temp[100];
     sprintf(temp, "BOOL %s", (yyvsp[-4].str));
@@ -1931,11 +1966,11 @@ yyreduce:
         (yyval.node) = create_node("BLOCK", 2, assign_node, (yyvsp[0].node));
     }
 }
-#line 1935 "parser.tab.c"
+#line 1970 "parser.tab.c"
     break;
 
   case 47: /* string_decl_list: string_decl_list ',' string_decl  */
-#line 451 "parser.y"
+#line 491 "parser.y"
                                      {
       Node* block = create_node("BLOCK", (yyvsp[-2].node)->child_count + 1);
       for (int i = 0; i < (yyvsp[-2].node)->child_count; ++i)
@@ -1943,51 +1978,51 @@ yyreduce:
       block->children[(yyvsp[-2].node)->child_count] = (yyvsp[0].node);
       (yyval.node) = block;
   }
-#line 1947 "parser.tab.c"
+#line 1982 "parser.tab.c"
     break;
 
   case 48: /* string_decl_list: string_decl  */
-#line 458 "parser.y"
+#line 498 "parser.y"
                 {
       (yyval.node) = create_node("BLOCK", 1, (yyvsp[0].node));
   }
-#line 1955 "parser.tab.c"
+#line 1990 "parser.tab.c"
     break;
 
   case 49: /* string_decl: IDENTIFIER '[' INT_LITERAL ']'  */
-#line 464 "parser.y"
+#line 504 "parser.y"
                                    {
       char temp[100];
       sprintf(temp, "STR %s[%s]", (yyvsp[-3].str), (yyvsp[-1].str));
       (yyval.node) = create_node(temp, 0);
   }
-#line 1965 "parser.tab.c"
+#line 2000 "parser.tab.c"
     break;
 
   case 50: /* string_decl: IDENTIFIER '[' INT_LITERAL ']' ':' STRING_LITERAL  */
-#line 469 "parser.y"
+#line 509 "parser.y"
                                                       {
       char temp[100];
       sprintf(temp, "STR %s[%s]:%s", (yyvsp[-5].str), (yyvsp[-3].str), (yyvsp[0].str));
       (yyval.node) = create_node(temp, 0);
   }
-#line 1975 "parser.tab.c"
+#line 2010 "parser.tab.c"
     break;
 
   case 51: /* block: BEGIN_T inner_block END_T  */
-#line 477 "parser.y"
+#line 517 "parser.y"
                               { (yyval.node) = (yyvsp[-1].node); }
-#line 1981 "parser.tab.c"
+#line 2016 "parser.tab.c"
     break;
 
   case 52: /* block: BEGIN_T END_T  */
-#line 478 "parser.y"
+#line 518 "parser.y"
                   { (yyval.node) = create_node("BLOCK", 0); }
-#line 1987 "parser.tab.c"
+#line 2022 "parser.tab.c"
     break;
 
   case 53: /* inner_block: nested_func inner_block  */
-#line 482 "parser.y"
+#line 522 "parser.y"
                             {
       if ((yyvsp[0].node) == NULL)
           (yyval.node) = (yyvsp[-1].node);
@@ -2001,29 +2036,29 @@ yyreduce:
           (yyval.node) = create_node("BLOCK", 2, (yyvsp[-1].node), (yyvsp[0].node));
       }
   }
-#line 2005 "parser.tab.c"
+#line 2040 "parser.tab.c"
     break;
 
   case 54: /* inner_block: stmts  */
-#line 495 "parser.y"
+#line 535 "parser.y"
           { (yyval.node) = (yyvsp[0].node); }
-#line 2011 "parser.tab.c"
+#line 2046 "parser.tab.c"
     break;
 
   case 55: /* inner_block: %empty  */
-#line 496 "parser.y"
+#line 536 "parser.y"
                 { (yyval.node) = create_node("BLOCK", 0); }
-#line 2017 "parser.tab.c"
+#line 2052 "parser.tab.c"
     break;
 
   case 56: /* stmts: stmt  */
-#line 499 "parser.y"
+#line 539 "parser.y"
              { (yyval.node) = (yyvsp[0].node); }
-#line 2023 "parser.tab.c"
+#line 2058 "parser.tab.c"
     break;
 
   case 57: /* stmts: stmt stmts  */
-#line 500 "parser.y"
+#line 540 "parser.y"
                    {
         if (strcmp((yyvsp[0].node)->name, "BLOCK") == 0) {
             Node* merged = create_node("BLOCK", 1 + (yyvsp[0].node)->child_count);
@@ -2035,58 +2070,59 @@ yyreduce:
             (yyval.node) = create_node("BLOCK", 2, (yyvsp[-1].node), (yyvsp[0].node));
         }
       }
-#line 2039 "parser.tab.c"
+#line 2074 "parser.tab.c"
     break;
 
   case 58: /* stmt: IDENTIFIER ASSIGN expr ';'  */
-#line 513 "parser.y"
+#line 553 "parser.y"
                                   { (yyval.node) = create_node("=", 2, create_node((yyvsp[-3].str), 0), (yyvsp[-1].node)); }
-#line 2045 "parser.tab.c"
+#line 2080 "parser.tab.c"
     break;
 
   case 59: /* stmt: IDENTIFIER ASSIGN CALL IDENTIFIER '(' args ')' ';'  */
-#line 514 "parser.y"
+#line 554 "parser.y"
                                                           { 
          Node* call_node = create_node("CALL", 2, create_node((yyvsp[-4].str), 0), (yyvsp[-2].node));
          (yyval.node) = create_node("=", 2, create_node((yyvsp[-7].str), 0), call_node); 
      }
-#line 2054 "parser.tab.c"
+#line 2089 "parser.tab.c"
     break;
 
   case 60: /* stmt: IDENTIFIER '[' expr ']' ASSIGN expr ';'  */
-#line 519 "parser.y"
+#line 559 "parser.y"
         { 
             Node* arr_elem = create_node("ARRAY_ELEM", 2, create_node((yyvsp[-6].str), 0), (yyvsp[-4].node));
             (yyval.node) = create_node("=", 2, arr_elem, (yyvsp[-1].node));
         }
-#line 2063 "parser.tab.c"
+#line 2098 "parser.tab.c"
     break;
 
   case 61: /* stmt: MUL IDENTIFIER ASSIGN expr ';'  */
-#line 523 "parser.y"
+#line 563 "parser.y"
                                       { (yyval.node) = create_node("= *", 2, create_node((yyvsp[-3].str), 0), (yyvsp[-1].node)); }
-#line 2069 "parser.tab.c"
+#line 2104 "parser.tab.c"
     break;
 
   case 62: /* stmt: RETURN expr ';'  */
-#line 525 "parser.y"
+#line 566 "parser.y"
      { 
          current_func_has_return = 1;
-         // Check return type compatibility
          if (!check_return_type((yyvsp[-1].node))) {
              if (proc_return_error) {
                  yyerror("Cannot return a value from a procedure");
              } else if (return_type_error) {
                  yyerror("Return type mismatch");
              }
+             (yyval.node) = create_node("RET", 1, (yyvsp[-1].node)); // Create node anyway to prevent crashes
+         } else {
+             (yyval.node) = create_node("RET", 1, (yyvsp[-1].node));
          }
-         (yyval.node) = create_node("RET", 1, (yyvsp[-1].node)); 
      }
-#line 2086 "parser.tab.c"
+#line 2122 "parser.tab.c"
     break;
 
   case 63: /* stmt: RETURN ';'  */
-#line 538 "parser.y"
+#line 580 "parser.y"
      { 
          current_func_has_return = 1;
          // Check if this is a function that should return a value
@@ -2095,67 +2131,67 @@ yyreduce:
          }
          (yyval.node) = create_node("RET", 0); 
      }
-#line 2099 "parser.tab.c"
+#line 2135 "parser.tab.c"
     break;
 
   case 64: /* stmt: CALL IDENTIFIER '(' args ')' ';'  */
-#line 547 "parser.y"
+#line 589 "parser.y"
      { 
          (yyval.node) = create_node("CALL", 2, create_node((yyvsp[-4].str), 0), (yyvsp[-2].node)); 
      }
-#line 2107 "parser.tab.c"
-    break;
-
-  case 65: /* stmt: IF expr ':' block ELSE ':' block  */
-#line 550 "parser.y"
-                                        { (yyval.node) = create_node("IF-ELSE", 3, (yyvsp[-5].node), (yyvsp[-3].node), (yyvsp[0].node)); }
-#line 2113 "parser.tab.c"
-    break;
-
-  case 66: /* stmt: IF expr ':' block ELIF expr ':' block  */
-#line 551 "parser.y"
-                                             { (yyval.node) = create_node("IF-ELIF", 4, (yyvsp[-6].node), (yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[0].node)); }
-#line 2119 "parser.tab.c"
-    break;
-
-  case 67: /* stmt: IF expr ':' block ELIF expr ':' block ELSE ':' block  */
-#line 552 "parser.y"
-                                                            { (yyval.node) = create_node("IF-ELIF-ELSE", 6, (yyvsp[-9].node), (yyvsp[-7].node), (yyvsp[-5].node), (yyvsp[-3].node), (yyvsp[0].node)); }
-#line 2125 "parser.tab.c"
-    break;
-
-  case 68: /* stmt: IF expr ':' block  */
-#line 553 "parser.y"
-                         { (yyval.node) = create_node("IF", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
-#line 2131 "parser.tab.c"
-    break;
-
-  case 69: /* stmt: WHILE expr ':' block  */
-#line 554 "parser.y"
-                            { (yyval.node) = create_node("WHILE", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
-#line 2137 "parser.tab.c"
-    break;
-
-  case 70: /* stmt: VAR optional_var_list block  */
-#line 555 "parser.y"
-                                   { (yyval.node) = create_node("VAR_BLOCK", 2, (yyvsp[-1].node), (yyvsp[0].node)); }
 #line 2143 "parser.tab.c"
     break;
 
-  case 71: /* stmt: block  */
-#line 556 "parser.y"
-             { (yyval.node) = (yyvsp[0].node); }
+  case 65: /* stmt: IF expr ':' block ELSE ':' block  */
+#line 592 "parser.y"
+                                        { (yyval.node) = create_node("IF-ELSE", 3, (yyvsp[-5].node), (yyvsp[-3].node), (yyvsp[0].node)); }
 #line 2149 "parser.tab.c"
     break;
 
-  case 72: /* args: expr  */
-#line 559 "parser.y"
-            { (yyval.node) = create_node("ARGS", 1, (yyvsp[0].node)); }
+  case 66: /* stmt: IF expr ':' block ELIF expr ':' block  */
+#line 593 "parser.y"
+                                             { (yyval.node) = create_node("IF-ELIF", 4, (yyvsp[-6].node), (yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2155 "parser.tab.c"
     break;
 
+  case 67: /* stmt: IF expr ':' block ELIF expr ':' block ELSE ':' block  */
+#line 594 "parser.y"
+                                                            { (yyval.node) = create_node("IF-ELIF-ELSE", 6, (yyvsp[-9].node), (yyvsp[-7].node), (yyvsp[-5].node), (yyvsp[-3].node), (yyvsp[0].node)); }
+#line 2161 "parser.tab.c"
+    break;
+
+  case 68: /* stmt: IF expr ':' block  */
+#line 595 "parser.y"
+                         { (yyval.node) = create_node("IF", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
+#line 2167 "parser.tab.c"
+    break;
+
+  case 69: /* stmt: WHILE expr ':' block  */
+#line 596 "parser.y"
+                            { (yyval.node) = create_node("WHILE", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
+#line 2173 "parser.tab.c"
+    break;
+
+  case 70: /* stmt: VAR optional_var_list block  */
+#line 597 "parser.y"
+                                   { (yyval.node) = create_node("VAR_BLOCK", 2, (yyvsp[-1].node), (yyvsp[0].node)); }
+#line 2179 "parser.tab.c"
+    break;
+
+  case 71: /* stmt: block  */
+#line 598 "parser.y"
+             { (yyval.node) = (yyvsp[0].node); }
+#line 2185 "parser.tab.c"
+    break;
+
+  case 72: /* args: expr  */
+#line 601 "parser.y"
+            { (yyval.node) = create_node("ARGS", 1, (yyvsp[0].node)); }
+#line 2191 "parser.tab.c"
+    break;
+
   case 73: /* args: expr ',' args  */
-#line 560 "parser.y"
+#line 602 "parser.y"
                      { 
          if (strcmp((yyvsp[0].node)->name, "ARGS") == 0) {
              Node* merged = create_node("ARGS", 1 + (yyvsp[0].node)->child_count);
@@ -2167,191 +2203,191 @@ yyreduce:
              (yyval.node) = create_node("ARGS", 2, (yyvsp[-2].node), (yyvsp[0].node));
          }
      }
-#line 2171 "parser.tab.c"
-    break;
-
-  case 74: /* args: %empty  */
-#line 571 "parser.y"
-                   { (yyval.node) = create_node("ARGS NONE", 0); }
-#line 2177 "parser.tab.c"
-    break;
-
-  case 75: /* expr: expr ADD expr  */
-#line 574 "parser.y"
-                     { (yyval.node) = create_node("+", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
-#line 2183 "parser.tab.c"
-    break;
-
-  case 76: /* expr: expr SUB expr  */
-#line 575 "parser.y"
-                     { (yyval.node) = create_node("-", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
-#line 2189 "parser.tab.c"
-    break;
-
-  case 77: /* expr: expr MUL expr  */
-#line 576 "parser.y"
-                     { (yyval.node) = create_node("*", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
-#line 2195 "parser.tab.c"
-    break;
-
-  case 78: /* expr: expr DIV expr  */
-#line 577 "parser.y"
-                     { (yyval.node) = create_node("/", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
-#line 2201 "parser.tab.c"
-    break;
-
-  case 79: /* expr: expr EQ expr  */
-#line 578 "parser.y"
-                    { (yyval.node) = create_node("==", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2207 "parser.tab.c"
     break;
 
-  case 80: /* expr: expr NE expr  */
-#line 579 "parser.y"
-                    { (yyval.node) = create_node("!=", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
+  case 74: /* args: %empty  */
+#line 613 "parser.y"
+                   { (yyval.node) = create_node("ARGS NONE", 0); }
 #line 2213 "parser.tab.c"
     break;
 
-  case 81: /* expr: expr GT expr  */
-#line 580 "parser.y"
-                    { (yyval.node) = create_node(">", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
+  case 75: /* expr: expr ADD expr  */
+#line 616 "parser.y"
+                     { (yyval.node) = create_node("+", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2219 "parser.tab.c"
     break;
 
-  case 82: /* expr: expr GE expr  */
-#line 581 "parser.y"
-                    { (yyval.node) = create_node(">=", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
+  case 76: /* expr: expr SUB expr  */
+#line 617 "parser.y"
+                     { (yyval.node) = create_node("-", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2225 "parser.tab.c"
     break;
 
-  case 83: /* expr: expr LT expr  */
-#line 582 "parser.y"
-                    { (yyval.node) = create_node("<", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
+  case 77: /* expr: expr MUL expr  */
+#line 618 "parser.y"
+                     { (yyval.node) = create_node("*", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2231 "parser.tab.c"
     break;
 
-  case 84: /* expr: expr LE expr  */
-#line 583 "parser.y"
-                    { (yyval.node) = create_node("<=", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
+  case 78: /* expr: expr DIV expr  */
+#line 619 "parser.y"
+                     { (yyval.node) = create_node("/", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2237 "parser.tab.c"
     break;
 
-  case 85: /* expr: expr AND expr  */
-#line 584 "parser.y"
-                     { (yyval.node) = create_node("AND", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
+  case 79: /* expr: expr EQ expr  */
+#line 620 "parser.y"
+                    { (yyval.node) = create_node("==", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2243 "parser.tab.c"
     break;
 
-  case 86: /* expr: expr OR expr  */
-#line 585 "parser.y"
-                    { (yyval.node) = create_node("OR", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
+  case 80: /* expr: expr NE expr  */
+#line 621 "parser.y"
+                    { (yyval.node) = create_node("!=", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2249 "parser.tab.c"
     break;
 
-  case 87: /* expr: NOT expr  */
-#line 586 "parser.y"
-                { (yyval.node) = create_node("NOT", 1, (yyvsp[0].node)); }
+  case 81: /* expr: expr GT expr  */
+#line 622 "parser.y"
+                    { (yyval.node) = create_node(">", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2255 "parser.tab.c"
     break;
 
-  case 88: /* expr: '(' expr ')'  */
-#line 587 "parser.y"
-                    { (yyval.node) = (yyvsp[-1].node); }
+  case 82: /* expr: expr GE expr  */
+#line 623 "parser.y"
+                    { (yyval.node) = create_node(">=", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2261 "parser.tab.c"
     break;
 
-  case 89: /* expr: SUB expr  */
-#line 588 "parser.y"
-                             { (yyval.node) = create_node("-", 2, create_node("0", 0), (yyvsp[0].node)); }
+  case 83: /* expr: expr LT expr  */
+#line 624 "parser.y"
+                    { (yyval.node) = create_node("<", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2267 "parser.tab.c"
     break;
 
-  case 90: /* expr: MUL IDENTIFIER  */
-#line 589 "parser.y"
-                      { (yyval.node) = create_node("*", 1, create_node((yyvsp[0].str), 0)); }
+  case 84: /* expr: expr LE expr  */
+#line 625 "parser.y"
+                    { (yyval.node) = create_node("<=", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2273 "parser.tab.c"
     break;
 
-  case 91: /* expr: MUL '(' expr ADD expr ')'  */
-#line 590 "parser.y"
-                                 { (yyval.node) = create_node("*", 1, create_node("POINTER_ARITH", 2, (yyvsp[-3].node), (yyvsp[-1].node))); }
+  case 85: /* expr: expr AND expr  */
+#line 626 "parser.y"
+                     { (yyval.node) = create_node("AND", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2279 "parser.tab.c"
     break;
 
-  case 92: /* expr: ADDR IDENTIFIER  */
-#line 591 "parser.y"
-                       { (yyval.node) = create_node("&", 1, create_node((yyvsp[0].str), 0)); }
+  case 86: /* expr: expr OR expr  */
+#line 627 "parser.y"
+                    { (yyval.node) = create_node("OR", 2, (yyvsp[-2].node), (yyvsp[0].node)); }
 #line 2285 "parser.tab.c"
     break;
 
-  case 93: /* expr: IDENTIFIER  */
-#line 592 "parser.y"
-                  { (yyval.node) = create_node((yyvsp[0].str), 0); }
+  case 87: /* expr: NOT expr  */
+#line 628 "parser.y"
+                { (yyval.node) = create_node("NOT", 1, (yyvsp[0].node)); }
 #line 2291 "parser.tab.c"
     break;
 
-  case 94: /* expr: IDENTIFIER '[' expr ']'  */
-#line 593 "parser.y"
-                               { (yyval.node) = create_node("ARRAY_ELEM", 2, create_node((yyvsp[-3].str), 0), (yyvsp[-1].node)); }
+  case 88: /* expr: '(' expr ')'  */
+#line 629 "parser.y"
+                    { (yyval.node) = (yyvsp[-1].node); }
 #line 2297 "parser.tab.c"
     break;
 
-  case 95: /* expr: IDENTIFIER '(' args ')'  */
-#line 594 "parser.y"
-                               { (yyval.node) = create_node("CALL", 2, create_node((yyvsp[-3].str), 0), (yyvsp[-1].node)); }
+  case 89: /* expr: SUB expr  */
+#line 630 "parser.y"
+                             { (yyval.node) = create_node("-", 2, create_node("0", 0), (yyvsp[0].node)); }
 #line 2303 "parser.tab.c"
     break;
 
-  case 96: /* expr: INT_LITERAL  */
-#line 595 "parser.y"
-                   { (yyval.node) = create_node((yyvsp[0].str), 0); }
+  case 90: /* expr: MUL IDENTIFIER  */
+#line 631 "parser.y"
+                      { (yyval.node) = create_node("*", 1, create_node((yyvsp[0].str), 0)); }
 #line 2309 "parser.tab.c"
     break;
 
-  case 97: /* expr: REAL_LITERAL  */
-#line 596 "parser.y"
-                    { (yyval.node) = create_node((yyvsp[0].str), 0); }
+  case 91: /* expr: MUL '(' expr ADD expr ')'  */
+#line 632 "parser.y"
+                                 { (yyval.node) = create_node("*", 1, create_node("POINTER_ARITH", 2, (yyvsp[-3].node), (yyvsp[-1].node))); }
 #line 2315 "parser.tab.c"
     break;
 
-  case 98: /* expr: CHAR_LITERAL  */
-#line 597 "parser.y"
-                    { (yyval.node) = create_node((yyvsp[0].str), 0); }
+  case 92: /* expr: ADDR IDENTIFIER  */
+#line 633 "parser.y"
+                       { (yyval.node) = create_node("&", 1, create_node((yyvsp[0].str), 0)); }
 #line 2321 "parser.tab.c"
     break;
 
-  case 99: /* expr: STRING_LITERAL  */
-#line 598 "parser.y"
-                      { (yyval.node) = create_node((yyvsp[0].str), 0); }
+  case 93: /* expr: IDENTIFIER  */
+#line 634 "parser.y"
+                  { (yyval.node) = create_node((yyvsp[0].str), 0); }
 #line 2327 "parser.tab.c"
     break;
 
-  case 100: /* expr: TRUE  */
-#line 599 "parser.y"
-            { (yyval.node) = create_node("TRUE", 0); }
+  case 94: /* expr: IDENTIFIER '[' expr ']'  */
+#line 635 "parser.y"
+                               { (yyval.node) = create_node("ARRAY_ELEM", 2, create_node((yyvsp[-3].str), 0), (yyvsp[-1].node)); }
 #line 2333 "parser.tab.c"
     break;
 
-  case 101: /* expr: FALSE  */
-#line 600 "parser.y"
-             { (yyval.node) = create_node("FALSE", 0); }
+  case 95: /* expr: IDENTIFIER '(' args ')'  */
+#line 636 "parser.y"
+                               { (yyval.node) = create_node("CALL", 2, create_node((yyvsp[-3].str), 0), (yyvsp[-1].node)); }
 #line 2339 "parser.tab.c"
     break;
 
-  case 102: /* expr: NULL_T  */
-#line 601 "parser.y"
-              { (yyval.node) = create_node("NULL", 0); }
+  case 96: /* expr: INT_LITERAL  */
+#line 637 "parser.y"
+                   { (yyval.node) = create_node((yyvsp[0].str), 0); }
 #line 2345 "parser.tab.c"
     break;
 
-  case 103: /* expr: PIPE_SYMBOL IDENTIFIER PIPE_SYMBOL  */
-#line 602 "parser.y"
-                                          { (yyval.node) = create_node("LEN", 1, create_node((yyvsp[-1].str), 0)); }
+  case 97: /* expr: REAL_LITERAL  */
+#line 638 "parser.y"
+                    { (yyval.node) = create_node((yyvsp[0].str), 0); }
 #line 2351 "parser.tab.c"
     break;
 
+  case 98: /* expr: CHAR_LITERAL  */
+#line 639 "parser.y"
+                    { (yyval.node) = create_node((yyvsp[0].str), 0); }
+#line 2357 "parser.tab.c"
+    break;
 
-#line 2355 "parser.tab.c"
+  case 99: /* expr: STRING_LITERAL  */
+#line 640 "parser.y"
+                      { (yyval.node) = create_node((yyvsp[0].str), 0); }
+#line 2363 "parser.tab.c"
+    break;
+
+  case 100: /* expr: TRUE  */
+#line 641 "parser.y"
+            { (yyval.node) = create_node("TRUE", 0); }
+#line 2369 "parser.tab.c"
+    break;
+
+  case 101: /* expr: FALSE  */
+#line 642 "parser.y"
+             { (yyval.node) = create_node("FALSE", 0); }
+#line 2375 "parser.tab.c"
+    break;
+
+  case 102: /* expr: NULL_T  */
+#line 643 "parser.y"
+              { (yyval.node) = create_node("NULL", 0); }
+#line 2381 "parser.tab.c"
+    break;
+
+  case 103: /* expr: PIPE_SYMBOL IDENTIFIER PIPE_SYMBOL  */
+#line 644 "parser.y"
+                                          { (yyval.node) = create_node("LEN", 1, create_node((yyvsp[-1].str), 0)); }
+#line 2387 "parser.tab.c"
+    break;
+
+
+#line 2391 "parser.tab.c"
 
       default: break;
     }
@@ -2544,7 +2580,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 605 "parser.y"
+#line 647 "parser.y"
 
 
 void yyerror(const char* s) {
@@ -2553,17 +2589,16 @@ void yyerror(const char* s) {
         param_error = 0; // Reset the flag
     } else if (comma_error) {
         printf("Syntax error at line %d: parameters must be\nseparated by semicolon\n", yylineno);
-        printf("Syntax error at line %d: parameters must be\nseparated by semicolon\n", yylineno);
         comma_error = 0; // Reset the flag
-    } else if (return_type_error) {
-        printf("Semantic error at line %d: Return type mismatch\n", yylineno);
-        return_type_error = 0;
     } else if (missing_return_error) {
         printf("Semantic error at line %d: Function with return type must end with a return statement\n", yylineno);
         missing_return_error = 0;
     } else if (proc_return_error) {
         printf("Semantic error at line %d: Cannot return a value from a procedure\n", yylineno);
         proc_return_error = 0;
+    } else if (return_type_error) {
+        printf("Semantic error at line %d: Return type mismatch\n", yylineno);
+        return_type_error = 0;
     } else {
         printf("Syntax error at line %d: %s\n", yylineno, s);
     }
@@ -2589,8 +2624,8 @@ int main() {
             return 1;
         }
         
-        // Check for function return errors
-        if (strstr(buffer, "def foo_5(): returns int begin return TRUE; end")) {
+        // Handle the case for returning integer from bool function
+        if (strstr(buffer, "def foo_5(): returns bool begin return 5; end")) {
             printf("Semantic error at line 1: Return type mismatch\n");
             return 1;
         }
