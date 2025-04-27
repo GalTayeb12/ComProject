@@ -1,0 +1,1 @@
+def foo_5(): returns int begin return TRUE; end
