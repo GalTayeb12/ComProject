@@ -54,55 +54,55 @@ extern int yydebug;
     YYEOF = 0,                     /* "end of file"  */
     YYerror = 256,                 /* error  */
     YYUNDEF = 257,                 /* "invalid token"  */
-    DEF = 258,                     /* DEF  */
-    RETURNS = 259,                 /* RETURNS  */
-    RETURN = 260,                  /* RETURN  */
-    IF = 261,                      /* IF  */
-    ELSE = 262,                    /* ELSE  */
-    ELIF = 263,                    /* ELIF  */
-    WHILE = 264,                   /* WHILE  */
-    FOR = 265,                     /* FOR  */
-    DO = 266,                      /* DO  */
-    VAR = 267,                     /* VAR  */
-    BEGIN_T = 268,                 /* BEGIN_T  */
-    END_T = 269,                   /* END_T  */
-    CALL = 270,                    /* CALL  */
-    NULL_T = 271,                  /* NULL_T  */
-    TRUE = 272,                    /* TRUE  */
-    FALSE = 273,                   /* FALSE  */
-    TYPE = 274,                    /* TYPE  */
-    INT = 275,                     /* INT  */
-    REAL = 276,                    /* REAL  */
-    CHAR = 277,                    /* CHAR  */
-    BOOL = 278,                    /* BOOL  */
-    STRING = 279,                  /* STRING  */
-    INT_PTR = 280,                 /* INT_PTR  */
-    REAL_PTR = 281,                /* REAL_PTR  */
-    CHAR_PTR = 282,                /* CHAR_PTR  */
-    AND = 283,                     /* AND  */
-    OR = 284,                      /* OR  */
-    NOT = 285,                     /* NOT  */
-    EQ = 286,                      /* EQ  */
-    NE = 287,                      /* NE  */
-    LE = 288,                      /* LE  */
-    GE = 289,                      /* GE  */
-    LT = 290,                      /* LT  */
-    GT = 291,                      /* GT  */
-    ASSIGN = 292,                  /* ASSIGN  */
-    ADD = 293,                     /* ADD  */
-    SUB = 294,                     /* SUB  */
-    MUL = 295,                     /* MUL  */
-    DIV = 296,                     /* DIV  */
-    ADDR = 297,                    /* ADDR  */
-    DEREF = 298,                   /* DEREF  */
-    PIPE_SYMBOL = 299,             /* PIPE_SYMBOL  */
-    IDENTIFIER = 300,              /* IDENTIFIER  */
-    INT_LITERAL = 301,             /* INT_LITERAL  */
-    REAL_LITERAL = 302,            /* REAL_LITERAL  */
-    CHAR_LITERAL = 303,            /* CHAR_LITERAL  */
-    STRING_LITERAL = 304,          /* STRING_LITERAL  */
-    UMINUS = 305,                  /* UMINUS  */
-    LOWER_THAN_ELSE = 306          /* LOWER_THAN_ELSE  */
+    IDENTIFIER = 258,              /* IDENTIFIER  */
+    TYPE = 259,                    /* TYPE  */
+    STRING_LITERAL = 260,          /* STRING_LITERAL  */
+    CHAR_LITERAL = 261,            /* CHAR_LITERAL  */
+    BOOL_LITERAL = 262,            /* BOOL_LITERAL  */
+    INT_LITERAL = 263,             /* INT_LITERAL  */
+    REAL_LITERAL = 264,            /* REAL_LITERAL  */
+    DEF = 265,                     /* DEF  */
+    RETURNS = 266,                 /* RETURNS  */
+    RETURN = 267,                  /* RETURN  */
+    IF = 268,                      /* IF  */
+    ELSE = 269,                    /* ELSE  */
+    ELIF = 270,                    /* ELIF  */
+    WHILE = 271,                   /* WHILE  */
+    FOR = 272,                     /* FOR  */
+    DO = 273,                      /* DO  */
+    VAR = 274,                     /* VAR  */
+    BEGIN_T = 275,                 /* BEGIN_T  */
+    END_T = 276,                   /* END_T  */
+    CALL = 277,                    /* CALL  */
+    NULL_T = 278,                  /* NULL_T  */
+    TRUE = 279,                    /* TRUE  */
+    FALSE = 280,                   /* FALSE  */
+    VOID = 281,                    /* VOID  */
+    INT = 282,                     /* INT  */
+    REAL = 283,                    /* REAL  */
+    CHAR = 284,                    /* CHAR  */
+    BOOL = 285,                    /* BOOL  */
+    STRING = 286,                  /* STRING  */
+    INT_PTR = 287,                 /* INT_PTR  */
+    REAL_PTR = 288,                /* REAL_PTR  */
+    CHAR_PTR = 289,                /* CHAR_PTR  */
+    ADD = 290,                     /* ADD  */
+    SUB = 291,                     /* SUB  */
+    MUL = 292,                     /* MUL  */
+    DIV = 293,                     /* DIV  */
+    ASSIGN = 294,                  /* ASSIGN  */
+    EQ = 295,                      /* EQ  */
+    NEQ = 296,                     /* NEQ  */
+    LEQ = 297,                     /* LEQ  */
+    GEQ = 298,                     /* GEQ  */
+    LT = 299,                      /* LT  */
+    GT = 300,                      /* GT  */
+    AND = 301,                     /* AND  */
+    OR = 302,                      /* OR  */
+    NOT = 303,                     /* NOT  */
+    ADDR = 304,                    /* ADDR  */
+    PIPE_SYMBOL = 305,             /* PIPE_SYMBOL  */
+    UMINUS = 306                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -111,10 +111,10 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 136 "parser.y"
+#line 25 "parser.y"
 
-    char* str;
     Node* node;
+    char* str;
 
 #line 120 "parser.tab.h"
 
@@ -124,9 +124,23 @@ typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_DECLARED 1
 #endif
 
+/* Location type.  */
+#if ! defined YYLTYPE && ! defined YYLTYPE_IS_DECLARED
+typedef struct YYLTYPE YYLTYPE;
+struct YYLTYPE
+{
+  int first_line;
+  int first_column;
+  int last_line;
+  int last_column;
+};
+# define YYLTYPE_IS_DECLARED 1
+# define YYLTYPE_IS_TRIVIAL 1
+#endif
+
 
 extern YYSTYPE yylval;
-
+extern YYLTYPE yylloc;
 
 int yyparse (void);
 

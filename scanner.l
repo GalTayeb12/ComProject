@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "parser.h"
+#include "ast.h"
 #include "parser.tab.h"
 
 extern YYSTYPE yylval;
@@ -17,6 +17,7 @@ ID          ({LETTER}|_)({LETTER}|{DIGIT}|_)*
 
 %%
 
+"void"          { return VOID; }
 "def"           { return DEF; }
 "returns"       { return RETURNS; }
 "return"        { return RETURN; }
@@ -49,9 +50,9 @@ ID          ({LETTER}|_)({LETTER}|{DIGIT}|_)*
 "not"           { return NOT; }
 
 "=="            { return EQ; }
-"!="            { return NE; }
-"<="            { return LE; }
-">="            { return GE; }
+"!="            { return NEQ; }
+"<="            { return LEQ; }
+">="            { return GEQ; }
 "<"             { return LT; }
 ">"             { return GT; }
 "="             { return ASSIGN; }
