@@ -1,0 +1,35 @@
+def test_func():
+begin
+  var
+    type int: a;
+  
+  if a == 10:
+  begin
+    a = 5;
+  end
+  
+  if a:
+  begin
+    a = 0;
+  end
+end
+
+def _main_():
+begin
+  var
+    type int: x;
+    type int: y;
+  
+  
+  if x > y:
+  begin
+    x = 10;
+  end
+  
+  if x + y:
+  begin
+    y = 20;
+  end
+  
+  call test_func();
+end

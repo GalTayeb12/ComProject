@@ -17,7 +17,7 @@ begin
 	return 'a';
 end
 
-def _main_():
+def _main_(): 
 var
 	type int:a;
 	type int:b;
@@ -25,3 +25,12 @@ begin
 	a = foo();
 	b = goo();
 end
+
+
+
+
+
+
+
+
+

@@ -1,5 +1,0 @@
-def foo_5(): returns bool begin return 5; end
-def _main_():
-begin
-  call foo_5();
-end

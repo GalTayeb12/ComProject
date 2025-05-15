@@ -1,0 +1,604 @@
+דוגמא 1 עמוד 3:✅
+דוגמאת הרצה 1 חוקי:✅ - הוספתי MAIN ✔️
+def test_pointer_operations():
+var
+    type char*: c;
+    type int: x, z;
+    type int*: y;
+begin
+    x = 5;
+    y = &x;
+    x = 6;
+    z = *y;
+    y = null;
+end
+
+def _main_():
+begin 
+   call test_pointer_operations();
+end
+
+דוגמאת הרצה 1 לא חוקי:✅ - הוספתי MAIN✔️
+def test_pointer_operations():
+var
+    type char*: c;
+    type int: x, z;
+    type int*: y;
+begin
+    x = 5;
+    y = &x;
+    x = 6;
+    z = *y;
+    y = null;
+    z = **y;
+    &x = y;
+end
+
+def _main_():
+begin 
+   call test_pointer_operations();
+end
+
+דוגמא 2 עמוד 5:✅
+דוגמאת הרצה 2 חוקי:✅✔️
+
+def foo(): returns int 
+begin 
+    return 0; 
+end 
+
+def _main_():   
+var 
+    type int: a; 
+begin 
+    a = foo(); 
+end
+
+דוגמא 3 עמוד 5:✅
+דומאת הרצה 3 לא חוקי:✅✔️
+def _main_(): 
+var 
+    type int: a; 
+begin 
+    a = foo(); 
+end 
+
+def foo(): returns int  
+begin 
+    return 0; 
+end
+
+דוגמאת 4 עמוד 6:✅
+דוגמאת הרצה 4 חוקי:✅ - הוספתי MAIN✔️
+
+
+def foo(par1 int:i; par2 int:j; par3 int:k): returns int
+begin
+    def fee(par1 int:l; par2 char:m; par3 real:x): returns bool
+    begin
+        return TRUE;
+    end
+    return 0;
+end
+
+def _main_():
+var
+    type int: a, b, c, result;
+begin 
+    a = 1;
+    b = 2;
+    c = 3;
+    result = call foo(a, b, c);
+end
+
+
+דוגמאת 5 עמוד 6:✅
+דוגמאת הרצה 5 חוקי: ✅- הוספתי MAIN✔️
+
+def goo(par1 int:i; par2 int:j; par3 int:k):
+begin
+    def fee(par1 real:m; par2 real:n; par3 real:x): returns bool
+    begin
+        return TRUE;
+    end
+    call fee(2,3.5,0.4);
+end
+
+def _main_():
+begin 
+    call goo(1,2, 3);
+end
+
+
+דוגמאת 6 עמוד 7:✅
+דוגמאת הרצה 6 חוקי:✅ - הוספתי MAIN✔️
+def foo(par1 int:i; par2 int:j; par3 int:k; par4 bool:l; par5 bool:m; par6 bool:n): returns int
+begin
+    return 0;
+end
+
+def _main_():
+var
+    type int: result;
+begin
+    result = call foo(1, 2, 3, TRUE, FALSE, TRUE);
+end
+
+דוגמאת 7 עמוד 7:✅
+דוגמאת הרצה 7 חוקי: ✅ - הוספתי MAIN✔️
+def fee(par1 int:a):
+begin
+end
+
+def _main_():
+begin
+    call fee(5);
+end
+
+
+דוגמאת 8 עמוד 7:✅
+דוגמאת הרצה 8 לא חוקי: ✅- הוספתי MAIN✔️
+def fee(par1 a):
+begin
+end
+
+def _main_():
+begin
+end
+
+
+דוגמאת 9 עמוד 7:✅
+דוגמאת הרצה 9 לא חוקי:✅- הוספתי MAIN✔️
+def foo(par1 int:i, par2 int:j):
+begin
+end
+#-> Syntax error: parameters must be separated by semicolon, not comma
+
+def _main_():
+begin
+    call foo(3, 4);
+end
+
+דוגמאת 10 עמוד 7:✅
+דוגמאת הרצה 10 חוקי: - הוספתי MAIN✔️
+def foo(par1 int:i; par2 int:j; par3 int:k): returns int
+var #-> variable declarations <-#
+    type int:temp;
+    type int:total; 
+begin
+    def square(par1 int:t): returns int #-> func declarations <-#
+    var #-> inner variable declarations <-#
+        type int:temp;
+    begin
+        temp = t * t;
+        return temp;
+    end
+    total = 1; #-> statements <-#
+    return total;
+end
+
+def _main_():
+begin
+    call foo(1, 2, 3);
+end
+
+
+
+דוגמאת 11 עמוד 8:✅
+דוגמאת הרצה 11 חוקי: ✅- הוספתי MAIN✔️
+פרוצדורה:
+def myProc():
+var
+    type int:i:0;
+    type bool:m:TRUE,ns:FALSE;
+    type char:c:'a';
+begin
+end
+
+def _main_():
+begin
+    call myProc();
+end
+
+פונקציה:✅ - הוספתי MAIN
+
+def myFunc(): returns int
+var
+    type int:i:0;
+    type bool:m:TRUE,ns:FALSE;
+    type char:c:'a';
+begin
+    return i;
+end
+
+def _main_():
+begin
+    call myFunc();
+end
+
+דוגמאת 12 עמוד 8:✅
+דוגמאת הרצה 12 חוקי: ✅- הוספתי MAIN✔️
+פרוצדורה:
+
+def legalStringDemo():               
+var
+    type string:a[30],b[100]:"moshe",s[11];
+    type char:c;
+    type int:i;
+begin
+    c = 'e';
+    a[19] = 'f';
+    a[4+2] = 'g';
+    b = a;
+    b[3] = c;
+    a = "test";
+    i = |b|;
+end
+
+def _main_():
+begin
+    call legalStringDemo();
+end
+
+פונקציה: ✅- הוספתי MAIN✔️
+
+def legalStringFunc(): returns int
+var
+    type string:a[30],b[100]:"moshe",s[11];
+    type char:c;
+    type int:i;
+begin
+    c = 'e';
+    a[19] = 'f';
+    a[4+2] = 'g';
+    b = a;
+    b[3] = c;
+    a = "test";
+    i = |b|;
+    return i;
+end
+
+def _main_():
+begin
+    call legalStringFunc();
+end
+
+דוגמאת 13 עמוד 8:✅ 
+דוגמאת הרצה 13 לא חוקי:✅ - הוספתי MAIN✔️
+def illegalStringDemo():            
+var
+    type string:a[30],b[100]:"moshe";
+    type char:c;
+begin
+    c = 'e';                     
+    c = a;                        
+    (a + 4)[0] = 'e';            
+end
+
+def _main_():
+begin
+    call illegalStringDemo();
+end
+דוגמאת 14 עמוד 10:✅ 
+דוגמאת הרצה 14 חוקי:✅ - הוספתי MAIN✔️
+
+def foo(): returns int
+var
+type int:x;
+begin
+    var
+    type int:y;
+    begin
+        x = 1;
+        y = 2;
+        begin
+            x = 2;
+        end
+        y = 3;
+    end
+    return 0;
+end
+
+def goo(): returns int
+begin
+    begin
+        begin
+        end
+    end
+    return 0;
+end
+
+def _main_():
+begin
+    call foo();
+    call goo();
+end
+
+דוגמאת 15 עמוד 11:✅
+דוגמאת הרצה 15 חוקי: ✅- הוספתי MAIN✔️
+
+def foo(): returns int
+begin
+    return 0;
+end
+
+def foo_2(): returns int
+var
+type int:a;
+begin
+    a = 2;
+    return a;
+end
+
+def foo_3(): returns int
+begin
+    if TRUE:
+    begin
+        return foo();
+    end
+    return 0;
+end
+
+def foo_4():
+var
+type int:a;
+begin
+    a = 2;
+end
+
+def _main_():
+var
+    type int:r1, r2, r3;
+begin
+    r1 = foo();
+    r2 = foo_2();
+    r3 = foo_3();
+    call foo_4();
+end
+
+
+דוגמאת 16 עמוד 12:✅
+דוגמאת הרצה 16 לא חוקי: ✅ - הוספתי MAIN✔️
+def foo_5(): returns int begin return TRUE; end
+
+def _main_():
+var
+    type int:result;
+begin
+    result = foo_5();
+end
+
+דוגמאת 17 עמוד 12:✅✔️
+דוגמאת הרצה 17 לא חוקי: - הוספתי MAIN
+def foo_6(): returns int begin if TRUE: begin return 0; end end
+
+def _main_():
+var
+    type int:result;
+begin
+    result = foo_6();
+end
+דוגמאת 17 עמוד 12:
+דוגמאת הרצה 17 לא חוקי: - הוספתי MAIN✖️
+def foo_7(): begin return 0; end
+
+def _main_():
+var
+    type int:res;
+begin
+    res = foo_7();
+end
+
+
+דוגמאת 18 עמוד 12 ✅
+דוגמאת הרצה 18 חוקי: - הוספתי MAIN✔️
+
+
+def foo(par1 int:i; par2 int:j): returns int
+begin
+    return i + j;
+end
+
+def expr_test(): returns int
+var
+    type int:a, b;
+    type bool:c, d;
+    type real:e;
+    type int*:p;
+begin
+    a = 3 || 2;                  
+    b = (3 + 2) / 3 - 5 * 2;      
+    c = TRUE and FALSE or FALSE;  
+    a = 5;                        
+    e = 3.234;                   
+    c = TRUE;                     
+    a = -5;                     
+    a = *p;                      
+    a = *(p + 5);                 
+    c = not FALSE;               
+    d = a == b;                   
+    a = call foo(i, j);           
+    call foo(i, j);              
+    return 0;
+end
+
+def _main_():
+var
+    type int:res;
+begin
+    res = expr_test();
+end
+דוגמאת 19 עמוד 13 ✅
+דוגמאת הרצה 19 חוקי: - הוספתי MAIN✅✔️
+
+def foo():
+var
+    type int:a:7;
+    type int:i;
+    type int:j;
+    type int:k;
+    type int:l;
+    type int:num;
+    type int:sum;
+    type int:x;
+    type bool:m;
+    type bool:n;
+begin
+    if 3 > 2: 
+    begin
+        i = a + 6;
+    end
+
+    if a + b > 4 and (num * b <= sum or not m == n):
+    begin
+        j = 3;
+    end
+    else:
+    begin
+        k = 4;
+        while TRUE:
+        begin
+            l = 2;
+            k = l + j;
+        end
+    end
+
+    if TRUE:
+        i = 5;
+
+    if not FALSE:
+    begin
+        j = 3;
+    end
+    else:
+        x = x - 1;
+
+    while FALSE:
+        x = x + 1;
+
+    for (i = 0; i < 10 and a != sum; i = i + 2):
+    begin
+        a = a + i;
+    end
+
+    do:
+    var
+        type int:a:5;
+    begin
+        a = a + i;
+        i = i + 1;
+    end
+    while i <= 10;
+end
+
+def _main_():
+begin
+end
+
+דוגמאת 20 עמוד 15 ✅
+דוגמאת הרצה 20 חוקי: ✅ - הוספתי MAIN✔️
+def pointer_example1():
+var
+    type int:x;
+    type int*:y;
+begin
+    x = 5;
+    y = &x;
+    x = 6;
+end
+
+def _main_():
+begin
+    call pointer_example1();
+end
+דוגמאת 20 עמוד 15 ✅
+דוגמאת הרצה 20 חוקי: ✅ - הוספתי MAIN✔️
+def pointer_example2():
+var
+    type char*:x;
+    type string y[10];
+    type char:z;
+begin
+    y = "foobar";
+    x = &y[5]; 
+    z = *(x - 5);  
+    y = "barfoo"; 
+end
+
+def _main_():
+begin
+    call pointer_example2();
+end
+
+
+דוגמאת 21 עמוד 15✅
+דוגמאת הרצה 21 לא חוקי:✅ - הוספתי MAIN✔️
+
+def pointer_illegal_example1():
+var
+type bool*:x; 
+x = &(1+3); 
+begin
+end
+
+def _main_():
+begin
+    call pointer_illegal_example1();
+end
+דוגמאת 22 עמוד 15✅
+דוגמאת הרצה 22 לא חוקי: ✅ - הוספתי MAIN✔️
+def pointer_illegal_example1():
+var
+    type char:x;
+    type int*:y;
+begin
+    y = &x; 
+end
+
+def _main_():
+begin
+    call pointer_illegal_example1();
+end
+דוגמאת 23 עמוד 15 ✅
+דוגמאת הרצה 23 לא חוקי:✅ - הוספתי MAIN✔️
+
+
+def pointer_illegal_example2():
+var
+    type char*x;
+    type char:y;
+begin
+    x = &(&y); 
+end
+
+def _main_():
+begin
+    call pointer_illegal_example2();
+end
+
+
+
+הרצת דוגמא פרויקט חלק 1:  - הוספתי MAIN✅✔️
+def foo(par1 int:x; par2 int:y; par3 int:z; par4 real:f):
+begin
+    if x > y:
+    begin
+        x = x + y;
+    end
+    else:
+    begin
+        y = x + y + z;
+        z = y * 2;
+        f = z;
+    end
+end
+
+def goo(): returns char
+begin
+    return 'a';
+end
+
+def _main_():
+begin
+end 
+

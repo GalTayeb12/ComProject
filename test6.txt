@@ -1,0 +1,38 @@
+def _main_():
+begin
+
+  undeclared_var = 10;
+  
+  var
+    type int: x;
+  end
+  
+
+  x = 5;
+  
+
+  var
+    type int: y;
+  end
+  y = x + 10;
+  
+  begin
+
+    z = 20;
+    
+    var
+      type int: z;  
+    end
+  end
+  
+
+  def nested_func(par1 int: value):
+  begin
+
+    value = value + 1;
+    
+
+    not_declared = 50;
+  end
+  end
+end

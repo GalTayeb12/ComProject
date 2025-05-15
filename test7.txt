@@ -1,0 +1,24 @@
+def _main_():
+begin
+
+  call one_param(10);
+  
+
+  call two_params(5);
+  
+
+  call two_params(5, 10);
+  
+
+  call one_param(5, 10);
+end
+
+def one_param(par1 int: x):
+begin
+
+end
+
+def two_params(par1 int: a; par2 int: b):
+begin
+
+end

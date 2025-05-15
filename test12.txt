@@ -1,0 +1,21 @@
+def legalStringFunc(): returns int
+var
+    type string:a[30],b[100]:"moshe",s[11];
+    type char:c;
+    type int:i;
+begin
+    c = 'e';
+    a[19] = 'f';
+    a[4+2] = 'g';
+    b = a;
+    b[3] = c;
+    a = "test";
+    i = |b|;
+    return i;
+end
+
+def _main_():
+begin
+    call legalStringFunc();
+end
+

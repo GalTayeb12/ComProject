@@ -1,0 +1,31 @@
+def _main_():
+begin
+  var
+    type int: x;
+    type int: y;
+    type int: x;  # This should trigger an error for duplicate variable 'x'
+  end
+end
+
+def test_function():
+begin
+  var
+    type int: x;  # This is OK because it's a different scope from _main_
+    type int: z;
+    type int: z;  # This should trigger an error for duplicate variable 'z'
+  end
+end
+
+def another_function():
+begin
+  var
+    type int: a;
+  
+  begin
+    var
+      type int: a;  # This is OK because it's a nested scope (different from outer 'a')
+      type int: b;
+      type int: b;  # This should trigger an error for duplicate variable 'b'
+    end
+  end
+end
