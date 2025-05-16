@@ -1,34 +1,8 @@
-def foo(par1 int:i; par2 int:j): returns int
-begin
-    return i + j;
-end
-
-def expr_test(): returns int
-var
-    type int:a, b;
-    type bool:c, d;
-    type real:e;
-    type int*:p;
-begin
-    a = 3 || 2;                  
-    b = (3 + 2) / 3 - 5 * 2;      
-    c = TRUE and FALSE or FALSE;  
-    a = 5;                        
-    e = 3.234;                   
-    c = TRUE;                     
-    a = -5;                     
-    a = *p;                      
-    a = *(p + 5);                 
-    c = not FALSE;               
-    d = a == b;                   
-    a = call foo(i, j);           
-    call foo(i, j);              
-    return 0;
-end
-
 def _main_():
-var
-    type int:res;
-begin
-    res = expr_test();
-end
+  var
+    type int: arr[10];
+    type string: str[10]: "hello";
+  begin
+    str[3] = 'a';  
+    arr[3] = 5;    
+  end

@@ -60,6 +60,9 @@ ID          ({LETTER}|_)({LETTER}|{DIGIT}|_)*
 "*"             { return MUL; }
 "/"             { return DIV; }
 "&"             { return ADDR; }
+"||"            { return BITWISE_OR; }
+"&&"            { return BITWISE_AND; }
+"!"             { return BITWISE_NOT; }
 
 ";"             { return ';'; }
 ","             { return ','; }

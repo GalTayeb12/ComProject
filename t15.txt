@@ -1,0 +1,17 @@
+def test_logical():
+  var
+    type bool: b1, b2;
+    type int: i;
+  begin
+
+    b1 = TRUE and FALSE; 
+    b2 = b1 or TRUE;     
+    
+ 
+    b1 = i and b2;        
+  end
+
+def _main_():
+begin
+  call test_logical();
+end

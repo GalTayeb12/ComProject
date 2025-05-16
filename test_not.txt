@@ -1,0 +1,17 @@
+def test_not():
+  var
+    type bool: b;
+    type int: i;
+  begin
+
+    b = not TRUE;       
+    b = not b;          
+    
+
+    b = not i;          
+  end
+
+def _main_():
+begin
+  call test_not();
+end

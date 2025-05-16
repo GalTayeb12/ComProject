@@ -1,0 +1,32 @@
+def _main_() :
+  var
+    type int: a;
+    type real: b;
+    type char: c;
+    type string: str[10];
+    type bool: flag;
+    type int*: ptr_a;
+    type real*: ptr_b;
+    type char*: ptr_c;
+  begin
+    
+    ptr_a = &a;      
+    ptr_b = &b;      
+    ptr_c = &c;      
+    
+    
+    ptr_c = &str[0]; 
+    
+    
+    ptr_a = &flag;   
+    ptr_b = &(a+b);  
+    ptr_c = &"test"; 
+    
+
+    ptr_a = &a + 1;  
+    
+
+    if ptr_a == &a:  
+      a = 10;
+    end
+  end

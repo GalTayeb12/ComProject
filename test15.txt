@@ -1,0 +1,102 @@
+def operator_test(): returns int
+var
+    
+    type int: a, b, result_int;
+    
+    type real: c, d, result_real;
+    
+  type bool: e;
+  type bool: f;
+  type bool: result_bool;
+    
+    type char: g, h;
+    
+    type string: str[20];
+   
+    type int*: p_int;
+begin
+    
+    a = 10;
+    b = 3;
+    c = 10.5;
+    d = 3.5;
+    
+    
+    result_int = a + b;      
+    result_int = a - b;      
+    result_int = a * b;      
+    result_int = a / b;      
+    
+    
+    result_real = a + c;     
+    result_real = a - d;   
+    result_real = b * c;    
+    result_real = a / d;     
+    
+    
+    result_real = c + d;     
+    result_real = c - d;     
+    result_real = c * d;     
+    result_real = c / d;     
+    
+   
+    e = TRUE;
+    f = FALSE;
+    
+    result_bool = e and f;   
+    result_bool = e or f;    
+    result_bool = not e;     
+    result_bool = not f;     
+    
+   
+    result_int = e || f;     
+    
+   
+    result_bool = a < b;     
+    result_bool = a > b;     
+    result_bool = a <= b;    
+    result_bool = a >= b;    
+    result_bool = c < d;     
+    result_bool = c > d;    
+    result_bool = c <= d;    
+    result_bool = c >= d;    
+    
+ 
+    result_bool = a == b;    
+    result_bool = a != b;     
+    
+  
+    result_bool = c == d;    
+    result_bool = c != d;    
+    
+   
+    result_bool = e == f;    
+    result_bool = e != f;    
+    
+   
+    g = 'A';
+    h = 'B';
+    result_bool = g == h;    
+    result_bool = g != h;    
+    
+    
+    result_bool = a == c;    
+    result_bool = a != c;    
+    
+    
+    str = "Hello";
+    result_int = |str|;     
+    
+  
+    result_bool = !e;     
+    result_bool = not f;     
+    
+    return 0;
+end
+
+def _main_():
+var
+    type int: res;
+begin
+    res = operator_test();
+end

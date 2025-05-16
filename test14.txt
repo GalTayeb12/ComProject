@@ -1,0 +1,16 @@
+def _main_():
+  var
+    type int: numbers[5];
+    type char: chars[5];
+    type string: words[10]: "hello";
+    type real: decimals[5];
+  begin
+    chars[2] = 'x';         
+    words[5] = "test";      
+    
+        
+ 
+    words[4] = numbers[3];  
+    
+
+  end
