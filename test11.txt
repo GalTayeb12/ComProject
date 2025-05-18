@@ -28,18 +28,6 @@ begin
         a = a + 1;
     end
 
-    while a:    
-    begin
-        a = a + 1;
-    end
+    
 
-    while r:     
-    begin
-        a = a + 1;
-    end
-
-    while a + 5:  
-    begin
-        a = a + 1;
-    end
 end

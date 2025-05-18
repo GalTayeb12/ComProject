@@ -124,7 +124,7 @@ void check_param_types(const char* func_name, Node* args_node, int line) {
         
         // If it's a literal, determine type from the literal
         if (arg->child_count == 0) {
-            if (isdigit(arg->name[0])) {
+            if (isdigit(arg->name[0]) || (arg->name[0] == '-' && isdigit(arg->name[1]))) {
                 if (strchr(arg->name, '.'))
                     arg_type = "REAL";
                 else
@@ -138,22 +138,44 @@ void check_param_types(const char* func_name, Node* args_node, int line) {
                 arg_type = "BOOL";
             else if (strcmp(arg->name, "NULL") == 0)
                 arg_type = "NULL";  // Will need special handling
-            // If it's an identifier, we'd ideally look up its type, but that requires var type tracking
+            else {
+                // If it's an identifier, try to look up its type
+                arg_type = get_var_type(arg->name);
+                if (arg_type == NULL) {
+                    // If we can't determine the type, just continue - other error handling will catch this
+                    continue;
+                }
+            }
         }
-        // For complex expressions, we'd need type inference
+        
+        // Debug output to see what's being detected
+        if (debug_mode) {
+            printf("DEBUG: Argument %d of function '%s' - detected type: '%s', expected type: '%s'\n", 
+                   i+1, func_name, arg_type ? arg_type : "unknown", func->param_types[i]);
+        }
         
         // For now, basic check for literals
-        if (arg_type != NULL && strcmp(arg_type, func->param_types[i]) != 0) {
+        if (arg_type != NULL && strcasecmp(arg_type, func->param_types[i]) != 0) {
             // Special case for NULL with pointer types
             if (strcmp(arg_type, "NULL") == 0 && strstr(func->param_types[i], "_PTR") != NULL) {
                 continue;  // NULL is compatible with pointer types
             }
             
+            // Add more debug info
+            if (debug_mode) {
+                printf("DEBUG: Type mismatch for parameter %d of function '%s'\n", i+1, func_name);
+                printf("       Expected: '%s', Got: '%s'\n", func->param_types[i], arg_type);
+            }
+            
             param_type_mismatch = 1;
             sprintf(yytext, "%s", func_name);
             yylineno = line;
-            yyerror("Parameter type mismatch");
-            break;
+            // Make error message more specific
+            char error_msg[256];
+            sprintf(error_msg, "Parameter type mismatch in function '%s': expected '%s' for parameter %d, got '%s'", 
+                    func_name, func->param_types[i], i+1, arg_type);
+            yyerror(error_msg);
+            return;  // Exit after first error to avoid multiple errors
         }
     }
 }
@@ -227,7 +249,6 @@ int check_param_order(const char* param_name, int expected_index) {
     // Extract the number from "parX" format
     if (strncmp(param_name, "par", 3) != 0) {
         param_order_error = 1;
-        yyerror("Parameters must be ordered as par1, par2, etc.");
         return 0;
     }
     
@@ -236,7 +257,6 @@ int check_param_order(const char* param_name, int expected_index) {
     
     if (param_num != expected_index) {
         param_order_error = 1;
-        yyerror("Parameters must be ordered as par1, par2, etc.");
         return 0;
     }
     
@@ -303,20 +323,24 @@ int is_bool_expr(Node* expr) {
     if (strcmp(expr->name, "TRUE") == 0 || strcmp(expr->name, "FALSE") == 0)
         return 1;
     
+    // Variable of type BOOL
+    if (expr->child_count == 0) {
+        char* var_type = get_var_type(expr->name);
+        if (var_type && strcmp(var_type, "BOOL") == 0)
+            return 1;
+    }
+    
     // Boolean operations
     if (strcmp(expr->name, "AND") == 0 || strcmp(expr->name, "OR") == 0 ||
         strcmp(expr->name, "NOT") == 0 || strcmp(expr->name, "BITWISE_NOT") == 0 ||
-        strcmp(expr->name, "NOT") == 0 || strcmp(expr->name, "BITWISE_OR") == 0 ||
-        strcmp(expr->name, "NOT") == 0 || strcmp(expr->name, "BITWISE_AND") == 0 ||
-        strcmp(expr->name, "NOT") == 0 || strcmp(expr->name, "==") == 0 ||
+        strcmp(expr->name, "BITWISE_OR") == 0 ||
+        strcmp(expr->name, "BITWISE_AND") == 0 ||
+        strcmp(expr->name, "==") == 0 ||
         strcmp(expr->name, "!=") == 0 || strcmp(expr->name, "<") == 0 ||
         strcmp(expr->name, ">") == 0 || strcmp(expr->name, "<=") == 0 ||
         strcmp(expr->name, ">=") == 0)
         return 1;
     
-    // Function calls that return boolean could be handled with more complex analysis
-    
-    // For this basic check, we'll assume other expressions are not boolean
     return 0;
 }
 
@@ -857,8 +881,8 @@ parameters
       int param_index = 1; // First parameter should be par1
       
       if (!check_param_order(param_str, param_index)) {
-          // Error already reported and flag set by check_param_order
-          // No need to add anything here
+          // Just set the flag, don't exit
+          param_order_error = 1;
       }
       
       for (int i = 0; i < $3->child_count; i++) {
@@ -869,8 +893,8 @@ parameters
           param_index = i + 2; // Next parameters should be par2, par3, etc.
           
           if (!check_param_order(param_str, param_index)) {
-              // Error already reported and flag set by check_param_order
-              // No need to add anything here
+              // Just set the flag, don't exit
+              param_order_error = 1;
           }
       }
       $$ = pars;
@@ -879,8 +903,8 @@ parameters
       // Check if this single parameter is par1
       char* param_str = $1->name;
       if (!check_param_order(param_str, 1)) {
-          // Error already reported and flag set by check_param_order
-          // No need to add anything here
+          // Just set the flag, don't exit
+          param_order_error = 1;
       }
       $$ = create_node("PARS", 1, $1);
   }
@@ -1875,20 +1899,24 @@ args
 
 /* הדפסת שגיאות יפות */
 void yyerror(const char* s) {
-    if (param_order_error) {
+    if (comma_error) {
+        printf("Syntax error at line %d: parameters must be separated by semicolon\n", yylineno);
+        comma_error = 0;
+    }
+    else if (param_type_mismatch) {
+    printf("Semantic error at line %d: Function '%s' has parameter type mismatch\n", yylineno, yytext);
+    param_type_mismatch = 0;
+    }
+    else if (param_order_error) {
         printf("Semantic error at line %d: Parameters must be ordered as par1, par2, etc.\n", yylineno);
         param_order_error = 0;
-        exit(1);  // Exit to stop parsing
     }
     else if (param_error) {
         printf("Syntax error at line %d: no type defined\n", yylineno);
         param_error = 0;
     }
     
-    else if (comma_error) {
-        printf("Syntax error at line %d: parameters must be separated by semicolon\n", yylineno);
-        comma_error = 0;
-    }
+    
     else if (return_type_error) {
         printf("Semantic error at line %d: Return type mismatch\n", yylineno);
         return_type_error = 0;
@@ -1929,10 +1957,6 @@ void yyerror(const char* s) {
     int required = get_function_param_count(yytext);
     printf("Semantic error at line %d: Function '%s' requires %d parameters but was called with a different        number\n", yylineno, yytext, required);
     param_count_mismatch = 0;
-    }
-    else if (param_type_mismatch) {
-    printf("Semantic error at line %d: Function '%s' has parameter type mismatch\n", yylineno, yytext);
-    param_type_mismatch = 0;
     }
     else if (string_return_error) {
     printf("Semantic error at line %d: Functions cannot return type string\n", yylineno);

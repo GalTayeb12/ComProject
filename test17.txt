@@ -25,8 +25,8 @@ def _main_() :
     *pc = 'A';    #-> Should work: assigning to dereferenced char* <-#
     
     #-> Invalid dereference operations <-#
-     #->i = *i;       Should fail: dereferencing non-pointer int <-#
-    #->r = *r;        Should fail: dereferencing non-pointer real <-#
+    i = *i;       #-> Should fail: dereferencing non-pointer int <-#
+   r = *r;       #->  Should fail: dereferencing non-pointer real <-#
    #-> b = *b;        Should fail: dereferencing non-pointer bool <-#
     #-> i = *arr;     Should fail: dereferencing array name <-#
     

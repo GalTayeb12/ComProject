@@ -1,5 +1,3 @@
-
-
 def correct_types(par1 int: x; par2 real: y; par3 char: c; par4 string: s; par5 bool: b):
 begin
 
@@ -11,9 +9,9 @@ begin
 
   call correct_types(10, 3.14, 'a', "hello", TRUE);
   
-  call correct_types(3.14, 10, "hello", 'a', FALSE);  # int/real swapped, char/string swapped
+  call correct_types(3.14, 10, "hello", 'a', FALSE);  
 
   call pointer_func(NULL, NULL);
 
-  call pointer_func(10, "hello");  # int instead of NULL, string instead of NULL
+  call pointer_func(10, "hello"); 
 end
