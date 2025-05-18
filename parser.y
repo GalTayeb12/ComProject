@@ -12,9 +12,18 @@ extern char* yytext;
 
 Node* root;
 
-#define MAX_DEPTH 100
+
+#define MAX_FUNCTIONS 100
+FunctionInfo function_table[MAX_FUNCTIONS];
+int function_count = 0;
+int param_count_mismatch = 0;
+
 #define MAX_VARS_PER_SCOPE 100
+VarInfo var_info[MAX_VARS_PER_SCOPE];
+
+#define MAX_DEPTH 100
 char* var_names[MAX_VARS_PER_SCOPE];
+
 int var_count = 0;
 int duplicate_var_error = 0;
 char return_type_stack[MAX_DEPTH][20];
@@ -52,18 +61,12 @@ int logical_op_type_error = 0;
 int debug_mode = 1;
 int invalid_address_error = 0;
 int dereference_type_error = 0;
-int param_order_error = 0;  // Add this to your list of flags
+//int param_order_error = 0;  
 
 
-#define MAX_FUNCTIONS 100
-FunctionInfo function_table[MAX_FUNCTIONS];
-int function_count = 0;
-int param_count_mismatch = 0;
-
-#define MAX_VARS_PER_SCOPE 100
-VarInfo var_info[MAX_VARS_PER_SCOPE];
 
 void add_function(char* name, int param_count, Node* params) {
+    printf("DEBUG: Registering function '%s' with %d parameters\n", name, param_count);
     if (is_function_defined(name) != 0) {
         duplicate_function_error = 1;
         yyerror("Error: Function already defined");
@@ -245,6 +248,7 @@ int is_var_defined(const char* name) {
     // printf("'%s' is NOT defined\n", name);
     return 0;
 }
+/*
 int check_param_order(const char* param_name, int expected_index) {
     // Extract the number from "parX" format
     if (strncmp(param_name, "par", 3) != 0) {
@@ -261,7 +265,8 @@ int check_param_order(const char* param_name, int expected_index) {
     }
     
     return 1;
-}
+}*/
+
 // Add variable to current scope
 void add_var(char* name, char* type) {
     if (is_var_defined(name)) {
@@ -801,13 +806,13 @@ nested_func
 
 func_header
   : DEF IDENTIFIER '(' parameters ')' ':' RETURNS ret_type {
+      param_count = 0;
       push_return_type(return_type_to_push);
       Node* params = $4;
       Node* ret_type_node = $8;
       if (strcmp($2, "_main_") == 0) {
           yyerror("Error: _main_() cannot return a value");
       }
-      param_count = 0;
 	 if (strcmp(params->name, "PARS NONE") != 0) {
           param_count = params->child_count;
           // Add parameters to variable list
@@ -824,13 +829,13 @@ func_header
               
               char* name_start = strrchr(param_str, ' ') + 1;
               add_var(name_start, type); 
-              param_count = 0;
           }
       }
       add_function($2, param_count, params);
       $$ = create_node($2, 2, params, ret_type_node);
   }
   | DEF IDENTIFIER '(' parameters ')' ':' {
+      param_count = 0;
       push_return_type(""); 
       Node* params = $4;
       Node* ret_type_node = create_node("RET NONE", 0);
@@ -846,7 +851,6 @@ func_header
           }
       }
       
-      param_count = 0;
       if (strcmp(params->name, "PARS NONE") != 0) {
           param_count = params->child_count;
           // Add parameters to variable list
@@ -879,11 +883,11 @@ parameters
       // Check if parameter is in correct order
       char* param_str = $1->name;
       int param_index = 1; // First parameter should be par1
-      
+      /*
       if (!check_param_order(param_str, param_index)) {
           // Just set the flag, don't exit
           param_order_error = 1;
-      }
+      }*/
       
       for (int i = 0; i < $3->child_count; i++) {
           pars->children[i+1] = $3->children[i];
@@ -891,21 +895,21 @@ parameters
           // Check each parameter in the list
           param_str = $3->children[i]->name;
           param_index = i + 2; // Next parameters should be par2, par3, etc.
-          
+          /*
           if (!check_param_order(param_str, param_index)) {
               // Just set the flag, don't exit
               param_order_error = 1;
-          }
+          }*/
       }
       $$ = pars;
   }
   | parameter {
       // Check if this single parameter is par1
-      char* param_str = $1->name;
+      char* param_str = $1->name;/*
       if (!check_param_order(param_str, 1)) {
           // Just set the flag, don't exit
           param_order_error = 1;
-      }
+      }*/
       $$ = create_node("PARS", 1, $1);
   }
   | /* empty */ {
@@ -1794,29 +1798,24 @@ expr
         arg_count = $3->child_count;
     }
     
-    // Special case handling for 'foo'
-    if (strcmp($1, "foo") == 0 && arg_count == 0) {
-        printf("Warning: Allowing foo() to be called without parameters for testing\n");
-    } else {
-        // Check parameter count even if function is not declared
-        int required_count = get_function_param_count($1);
-        if (required_count >= 0 && required_count != arg_count) {
-            param_count_mismatch = 1;
-            sprintf(yytext, "%s", $1);  // Store function name for error
-            yylineno = @1.first_line;   // Use the line number of function name token
-            yyerror("Parameter count mismatch");
-        } 
-        else if (!func_found) {
-            // Only trigger undeclared function error if param count was correct
-            undeclared_function_error = 1;
-            sprintf(yytext, "%s", $1);
-            yylineno = @1.first_line;
-            yyerror("Function called before declaration");
-        }
-        else {
-            // If function exists and param count is correct, check param types
-            check_param_types($1, $3, yylineno);
-        }
+    // Check parameter count even if function is not declared
+    int required_count = get_function_param_count($1);
+    if (required_count >= 0 && required_count != arg_count) {
+        param_count_mismatch = 1;
+        sprintf(yytext, "%s", $1);  // Store function name for error
+        yylineno = @1.first_line;   // Use the line number of function name token
+        yyerror("Parameter count mismatch");
+    } 
+    else if (!func_found) {
+        // Only trigger undeclared function error if param count was correct
+        undeclared_function_error = 1;
+        sprintf(yytext, "%s", $1);
+        yylineno = @1.first_line;
+        yyerror("Function called before declaration");
+    }
+    else {
+        // If function exists and param count is correct, check param types
+        check_param_types($1, $3, yylineno);
     }
     
     $$ = create_node("CALL", 2, create_node($1, 0), $3); 
@@ -1906,11 +1905,11 @@ void yyerror(const char* s) {
     else if (param_type_mismatch) {
     printf("Semantic error at line %d: Function '%s' has parameter type mismatch\n", yylineno, yytext);
     param_type_mismatch = 0;
-    }
+    }/*
     else if (param_order_error) {
         printf("Semantic error at line %d: Parameters must be ordered as par1, par2, etc.\n", yylineno);
         param_order_error = 0;
-    }
+    }*/
     else if (param_error) {
         printf("Syntax error at line %d: no type defined\n", yylineno);
         param_error = 0;
@@ -1955,7 +1954,7 @@ void yyerror(const char* s) {
     }
     else if (param_count_mismatch) {
     int required = get_function_param_count(yytext);
-    printf("Semantic error at line %d: Function '%s' requires %d parameters but was called with a different        number\n", yylineno, yytext, required);
+    printf("Semantic error at line %d: Function '%s' requires %d parameters but was called with a different number\n", yylineno, yytext, required);
     param_count_mismatch = 0;
     }
     else if (string_return_error) {
@@ -2028,6 +2027,7 @@ void yyerror(const char* s) {
 
 /* MAIN שמריץ את ה-parser */
 int main() {
+    printf("Parsing completed successfully.\n");
     if (yyparse() == 0) {
         if (!has_main) {
             fprintf(stderr, "Error: Program must have exactly one _main_() procedure\n");
@@ -2036,6 +2036,7 @@ int main() {
         
         // Debug all variables
         debug_print_all_vars();
+        printf("Starting parsing...\n");
         
         print_ast(root, 0);
     }
