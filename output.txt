@@ -1,0 +1,56 @@
+(CODE
+  (FUNC
+    test2
+      (PARS
+        (par1 INT p1)
+        (par2 BOOL p2)
+      )
+      (INT)
+      (BODY
+        (BLOCK
+          (= BOOL temp
+            (FALSE)
+          )
+        )
+        (BLOCK
+          (BLOCK
+            (IF-ELSE
+              (== p2 TRUE)
+              (BLOCK
+                (BLOCK
+                  (= temp
+                    (TRUE)
+                  )
+                  (= p1
+                    (* p1 10)
+                  )
+                )
+              )
+              (BLOCK
+                (= p1
+                  (+ p1 20)
+                )
+              )
+            )
+            (RET p1)
+          )
+        )
+      )
+  )
+  (FUNC
+    _main_
+      (PARS NONE)
+      (RET NONE)
+      (BODY
+        (BLOCK
+          (CALL
+            (test1)
+            (ARGS
+              (1)
+              (TRUE)
+            )
+          )
+        )
+      )
+  )
+)

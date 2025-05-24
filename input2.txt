@@ -1,0 +1,20 @@
+def test2(par1 int:p1; par2 bool:p2): returns int
+	var
+		type bool:temp:FALSE;
+	begin
+		if p2 == TRUE:
+			begin
+				temp = TRUE;
+				p1 = p1 * 10;
+			end
+		else:
+			begin 
+				p1 = p1 + 20;
+			end
+			return p1;
+	end
+	
+def _main_():
+begin
+     call test1(1, TRUE);
+end		
