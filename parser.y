@@ -1,3 +1,4 @@
+//Gal Tayeb 207338104, Noam Dahan 318821774, Noam Kadosh 207328428
 %{
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,7 +13,6 @@ extern char* yytext;
 
 Node* root;
 
-// Stack לניהול סוגי חזרה
 #define MAX_DEPTH 100
 char return_type_stack[MAX_DEPTH][20];
 int stack_top = -1;
@@ -20,7 +20,6 @@ char current_return_type[20] = "";
 char return_type_to_push[20] = "";
 int current_func_has_return = 0;
 
-// דגלים חכמים
 int param_error = 0;
 int comma_error = 0;
 int return_type_error = 0;
@@ -28,18 +27,15 @@ int missing_return_error = 0;
 int proc_return_error = 0;
 int has_main = 0;
 
-// טבלת פונקציות
 #define MAX_FUNCTIONS 100
 char* function_names[MAX_FUNCTIONS];
 int function_count = 0;
 
-// שמירת שמות פונקציות
 void add_function(char* name) {
     if (function_count < MAX_FUNCTIONS)
         function_names[function_count++] = strdup(name);
 }
 
-// בדיקה אם פונקציה קיימת
 int is_function_defined(const char* name) {
     for (int i = 0; i < function_count; i++) {
         if (strcmp(function_names[i], name) == 0)
@@ -48,7 +44,6 @@ int is_function_defined(const char* name) {
     return 0;
 }
 
-// מחסנית טיפוסי חזרה
 void push_return_type(const char* type) {
     if (++stack_top < MAX_DEPTH) {
         strcpy(return_type_stack[stack_top], type);
@@ -66,7 +61,6 @@ void pop_return_type() {
     }
 }
 
-// בדיקת התאמת סוג RETURN
 int check_return_type(Node* expr_node) {
     if (!expr_node) return 1;
 
@@ -75,11 +69,9 @@ int check_return_type(Node* expr_node) {
         return 0;
     }
 
-    // קריאה לפונקציה תמיד חוקי
     if (strcmp(expr_node->name, "CALL") == 0)
         return 1;
 
-    // משתנה
     if (expr_node->child_count == 0 && !isdigit(expr_node->name[0]) &&
         expr_node->name[0] != '\'' && expr_node->name[0] != '"' &&
         strcmp(expr_node->name, "TRUE") != 0 &&
@@ -109,7 +101,6 @@ int check_return_type(Node* expr_node) {
         strcmp(current_return_type, "CHAR_PTR") == 0))
         return 1;
 
-    // אופרטורים בסיסיים
     if (strcmp(expr_node->name, "+") == 0 || strcmp(expr_node->name, "-") == 0 ||
         strcmp(expr_node->name, "*") == 0 || strcmp(expr_node->name, "/") == 0)
         return 1;
@@ -118,7 +109,6 @@ int check_return_type(Node* expr_node) {
     return 0;
 }
 
-// בדיקה אם פונקציה מסתיימת ב-RETURN
 int ends_with_return(Node* node) {
     if (!node) return 0;
     if (strcmp(node->name, "BLOCK") == 0 || strcmp(node->name, "BODY") == 0) {
@@ -151,7 +141,6 @@ int ends_with_return(Node* node) {
     block inner_block stmts stmt expr args
     var_decls optional_var_list var_decl_list var_single_decl var_init_list string_decl_list string_decl body
 
-// קדימויות ואסוציאטיביות
 %left OR
 %left AND
 %left EQ NE
@@ -385,7 +374,6 @@ stmt
   }
 ;
 
-/* הצהרות משתנים (var_decls וכו') */
 var_decls
   : VAR optional_var_list { $$ = $2; }
   | /* empty */ { $$ = create_node("BLOCK", 0); }
@@ -427,7 +415,6 @@ var_single_decl
   }
 ;
 
-/* אתחול משתנים BOOL */
 var_init_list
   : IDENTIFIER ':' expr {
       char temp[100];
@@ -448,7 +435,6 @@ var_init_list
   }
 ;
 
-/* אתחול משתנים מסוג מחרוזת */
 string_decl_list
   : string_decl_list ',' string_decl {
       Node* merged = create_node("BLOCK", $1->child_count + 1);
@@ -475,7 +461,6 @@ string_decl
   }
 ;
 
-/* ביטויים מתמטיים ולוגיים */
 expr 
   : expr ADD expr { $$ = create_node("+", 2, $1, $3); }
   | expr SUB expr { $$ = create_node("-", 2, $1, $3); }
@@ -508,7 +493,6 @@ expr
   | PIPE_SYMBOL IDENTIFIER PIPE_SYMBOL { $$ = create_node("LEN", 1, create_node($2, 0)); }
 ;
 
-/* קריאות לפונקציה: ארגומנטים */
 args 
   : expr { $$ = create_node("ARGS", 1, $1); }
   | expr ',' args {
@@ -527,7 +511,6 @@ args
 
 %%
 
-/* הדפסת שגיאות יפות */
 void yyerror(const char* s) {
     if (param_error) {
         printf("Syntax error at line %d: no type defined\n", yylineno);
@@ -555,7 +538,6 @@ void yyerror(const char* s) {
     exit(1);
 }
 
-/* MAIN שמריץ את ה-parser */
 int main() {
     if (yyparse() == 0) {
         if (!has_main) {
