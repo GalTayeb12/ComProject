@@ -1,23 +1,20 @@
-def foo(par1 int:x; par2 int:y; par3 int:z; par4 real:f):
-begin
-    if x > y:
-    begin
-        x = x + y;
-    end
-    else:
-    begin
-        y = x + y + z;
-        z = y * 2;
-        f = z;
-    end
-end
-
-def goo(): returns char
-begin
-    return 'a';
-end
-
+def test1(par1 real:p1; par2 int:p2; par3 real:p3):
+	var
+		type int:temp;
+	begin
+		if p1 >= p3:
+			begin
+				temp = p2; 
+			end
+		else:
+			begin 
+				temp = p2*5;
+				p3 = p1+8.12;
+			end
+	end
+	
 def _main_():
 begin
-end 
-
+     call test1(1.2, 2, 3.2);
+end			
+			
