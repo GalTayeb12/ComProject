@@ -1,3 +1,4 @@
+//Gal Tayeb 207338104, Noam Dahan 318821774, Noam Kadosh 207328428
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,45 +26,38 @@ Node* create_node(char* name, int child_count, ...) {
     return node;
 }
 
-// Function to print a function node without parentheses around the function name
 void print_function_node(Node* node, int depth) {
     if (!node) return;
-    
-    // Print the function name without parentheses
+
     for (int i = 0; i < depth; i++)
         printf("  ");
     printf("%s\n", node->name);
-    
-    // Print all children
+
     for (int i = 0; i < node->child_count; i++) {
         print_ast(node->children[i], depth + 1);
     }
 }
 
-// Function to extract functions from the FUNC node
 void print_functions(Node* func_node, int depth) {
     if (!func_node || func_node->child_count == 0)
         return;
-    
-    // Print the first function
+
     if (func_node->child_count >= 1) {
         for (int i = 0; i < depth; i++)
             printf("  ");
         printf("(FUNC\n");
-        
-        // Print the function name WITHOUT parentheses and its content
+
         print_function_node(func_node->children[0], depth + 1);
         
         for (int i = 0; i < depth; i++)
             printf("  ");
         printf(")\n");
     }
-    
-    // Check if there's a second child that's a FUNC node
+
     if (func_node->child_count >= 2 && strcmp(func_node->children[1]->name, "FUNC") == 0) {
         print_functions(func_node->children[1], depth);
     }
-    // If second child is a regular function
+
     else if (func_node->child_count >= 2) {
         for (int i = 0; i < depth; i++)
             printf("  ");
