@@ -1,38 +1,36 @@
 (CODE
   (FUNC
-    test2
+    test4
       (PARS
         (par1 INT p1)
-        (par2 BOOL p2)
+        (par2 REAL p2)
+        (par3 CHAR p3)
       )
-      (INT)
+      (RET NONE)
       (BODY
         (BLOCK
-          (= BOOL temp
-            (FALSE)
+          (= CHAR temp
+            ('a')
           )
         )
         (BLOCK
-          (BLOCK
-            (IF-ELSE
-              (== p2 TRUE)
-              (BLOCK
-                (BLOCK
-                  (= temp
-                    (TRUE)
-                  )
-                  (= p1
-                    (* p1 10)
-                  )
-                )
+          (IF-ELSE
+            (!= temp p3)
+            (BLOCK
+              (= p2
+                (/ p1 10)
               )
+            )
+            (BLOCK
               (BLOCK
                 (= p1
-                  (+ p1 20)
+                  (* p1 5)
+                )
+                (= p2
+                  (+ p1 3.14)
                 )
               )
             )
-            (RET p1)
           )
         )
       )
@@ -44,10 +42,11 @@
       (BODY
         (BLOCK
           (CALL
-            (test1)
+            (test4)
             (ARGS
               (1)
-              (TRUE)
+              (3.2)
+              ("h")
             )
           )
         )

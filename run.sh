@@ -8,4 +8,4 @@ cd "$SCRIPT_DIR"
 bison -d parser.y
 flex scanner.l
 gcc lex.yy.c parser.tab.c ast.c -o compiler -lfl
-./compiler < test.txt > output.txt
+./compiler < input4.txt > output.txt
