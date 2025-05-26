@@ -1,0 +1,69 @@
+DEBUG: Registering function 'foo' with 2 parameters
+DEBUG: Registering function '_main_' with 0 parameters
+DEBUG: Argument 1 of function 'foo' - detected type: 'INT', expected type: 'INT'
+DEBUG: Argument 2 of function 'foo' - detected type: 'INT', expected type: 'INT'
+Parsing completed successfully.
+AST:
+(CODE
+  (FUNC
+    foo
+      (PARS
+        (par1 INT a)
+        (par2 INT b)
+      )
+      (INT)
+      (BODY
+        (BLOCK
+          (RET
+            (+ a b)
+          )
+        )
+      )
+  )
+  (FUNC
+    _main_
+      (PARS NONE)
+      (RET NONE)
+      (BODY
+        (BLOCK
+          (VAR_LIST
+            (INT c)
+            (INT d)
+          )
+        )
+        (BLOCK
+          (BLOCK
+            (= c
+              (5)
+            )
+            (= d
+              (10)
+            )
+            (CALL
+              (foo)
+              (ARGS
+                (c)
+                (d)
+              )
+            )
+          )
+        )
+      )
+  )
+)
+
+3AC Code:
+foo:
+    BeginFunc 16
+    t0 = a + b
+    Return t0
+    EndFunc
+main:
+    BeginFunc 28
+    c = 5
+    d = 10
+    PushParam c
+    PushParam d
+    LCall foo
+    PopParams 8
+    EndFunc

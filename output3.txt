@@ -1,0 +1,117 @@
+DEBUG: Registering function 'foo' with 1 parameters
+DEBUG: Registering function '_main_' with 0 parameters
+DEBUG: Argument 1 of function 'foo' - detected type: 'REAL', expected type: 'REAL'
+Parsing completed successfully.
+AST:
+(CODE
+  (FUNC
+    foo
+      (PARS
+        (par1 REAL x)
+      )
+      (INT)
+      (BODY
+        (BLOCK
+          (VAR_LIST
+            (INT a)
+            (INT b)
+          )
+        )
+        (BLOCK
+          (BLOCK
+            (= a
+              (23)
+            )
+            (IF-ELSE
+              (== a 23)
+              (BLOCK
+                (= b
+                  (10)
+                )
+              )
+              (BLOCK
+                (= b
+                  (19)
+                )
+              )
+            )
+            (RET
+              (+ b a)
+            )
+          )
+        )
+      )
+  )
+  (FUNC
+    _main_
+      (PARS NONE)
+      (RET NONE)
+      (BODY
+        (BLOCK
+          (VAR_LIST
+            (INT a)
+            (INT b)
+          )
+        )
+        (BLOCK
+          (BLOCK
+            (= a
+              (0)
+            )
+            (WHILE
+              (< a 10)
+              (BLOCK
+                (BLOCK
+                  (= b
+                    (CALL
+                      (foo)
+                      (ARGS
+                        (3.14)
+                      )
+                    )
+                  )
+                  (= a
+                    (+ a b)
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+  )
+)
+
+3AC Code:
+foo:
+    BeginFunc 24
+    a = 23
+    t0 = a == 23
+    if t0 Goto L1
+    Goto L2
+ L1:
+    b = 10
+    Goto L3
+ L2:
+    b = 19
+ L3:
+    t1 = b + a
+    Return t1
+    EndFunc
+main:
+    BeginFunc 28
+    a = 0
+L4:
+    t2 = a < 10
+    if t2 Goto L5
+    Goto L6
+ L5:
+    PushParam 3.14
+    t3 = LCall foo
+    PopParams 4
+    b = t3
+    t4 = a + b
+    a = t4
+    Goto L4
+ L6:
+    EndFunc

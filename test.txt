@@ -1,0 +1,13 @@
+def foo(par1 int:a; par2 int:b): returns int
+begin
+	return a + b;
+end
+
+def _main_():
+var
+	type int:c,d;
+begin
+	c = 5;
+	d = 10;
+	call foo(c, d);
+end

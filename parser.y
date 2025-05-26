@@ -2025,25 +2025,24 @@ void yyerror(const char* s) {
     exit(1);
 }
 
-/* MAIN שמריץ את ה-parser */
 int main() {
-    printf("Parsing completed successfully.\n");
-    
     if (yyparse() == 0) {
         if (!has_main) {
             fprintf(stderr, "Error: Program must have exactly one _main_() procedure\n");
             return 1;
         }
 
-        // Debug all variables
-        debug_print_all_vars();
-        printf("Starting AST generation...\n");
-
-        print_ast(root, 0); // הדפסת AST
-
-        // הוספה כאן — יצירת קוד ביניים
-        printf("Generating 3AC...\n");
-	gen_code(root);
+        printf("Parsing completed successfully.\n");
+        
+        // Print AST (optional, remove if you don't want it)
+        printf("AST:\n");
+        print_ast(root, 0);
+        
+        // Generate 3AC
+        printf("\n3AC Code:\n");
+        gen_code(root);
+        
+        return 0;
     }
-    return 0;
+    return 1;
 }
