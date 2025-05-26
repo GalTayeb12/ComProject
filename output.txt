@@ -1,0 +1,59 @@
+Parsing completed successfully.
+DEBUG: Registering function 'foo' with 2 parameters
+DEBUG: Registering function '_main_' with 0 parameters
+DEBUG: Argument 1 of function 'foo' - detected type: 'INT', expected type: 'INT'
+DEBUG: Argument 2 of function 'foo' - detected type: 'INT', expected type: 'INT'
+DEBUG: All variables in current scope:
+Starting AST generation...
+(CODE
+  (FUNC
+    foo
+      (PARS
+        (par1 INT a)
+        (par2 INT b)
+      )
+      (INT)
+      (BODY
+        (BLOCK
+          (RET
+            (+ a b)
+          )
+        )
+      )
+  )
+  (FUNC
+    _main_
+      (PARS NONE)
+      (RET NONE)
+      (BODY
+        (BLOCK
+          (VAR_LIST
+            (INT c)
+            (INT d)
+          )
+        )
+        (BLOCK
+          (CALL
+            (foo)
+            (ARGS
+              (c)
+              (d)
+            )
+          )
+        )
+      )
+  )
+)
+Generating 3AC...
+foo:
+    BeginFunc 4
+    t0 = a + b
+    Return t0
+    EndFunc
+_main_:
+    BeginFunc 12
+    PushParam d
+    PushParam c
+    t1 = LCall foo
+    PopParams 8
+    EndFunc

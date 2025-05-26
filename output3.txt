@@ -1,0 +1,120 @@
+Parsing completed successfully.
+DEBUG: Registering function 'foo' with 1 parameters
+DEBUG: Registering function '_main_' with 0 parameters
+DEBUG: Argument 1 of function 'foo' - detected type: 'REAL', expected type: 'REAL'
+DEBUG: All variables in current scope:
+Starting AST generation...
+(CODE
+  (FUNC
+    foo
+      (PARS
+        (par1 REAL x)
+      )
+      (INT)
+      (BODY
+        (BLOCK
+          (VAR_LIST
+            (INT a)
+            (INT b)
+          )
+        )
+        (BLOCK
+          (BLOCK
+            (= a
+              (23)
+            )
+            (IF-ELSE
+              (== a 23)
+              (BLOCK
+                (= b
+                  (10)
+                )
+              )
+              (BLOCK
+                (= b
+                  (19)
+                )
+              )
+            )
+            (RET
+              (+ b a)
+            )
+          )
+        )
+      )
+  )
+  (FUNC
+    _main_
+      (PARS NONE)
+      (RET NONE)
+      (BODY
+        (BLOCK
+          (VAR_LIST
+            (INT a)
+            (INT b)
+          )
+        )
+        (BLOCK
+          (BLOCK
+            (= a
+              (0)
+            )
+            (WHILE
+              (< a 10)
+              (BLOCK
+                (BLOCK
+                  (= b
+                    (CALL
+                      (foo)
+                      (ARGS
+                        (3.14)
+                      )
+                    )
+                  )
+                  (= a
+                    (+ a b)
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+  )
+)
+Generating 3AC...
+foo:
+    BeginFunc 24
+    t0 = 23
+    a = t0
+    if a == 23 Goto L1
+    Goto L2
+L1:
+    t1 = 10
+    b = t1
+    Goto L3
+L2:
+    t2 = 19
+    b = t2
+L3:
+    t3 = b + a
+    Return t3
+    EndFunc
+_main_:
+    BeginFunc 24
+    t4 = 0
+    a = t4
+L4:
+    if a < 10 Goto L5
+    Goto L6
+L5:
+    t5 = 3.14
+    PushParam t5
+    t6 = LCall foo
+    PopParams 8
+    b = t6
+    t7 = a + b
+    a = t7
+    Goto L4
+L6:
+    EndFunc

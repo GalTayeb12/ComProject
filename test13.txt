@@ -1,8 +1,0 @@
-def _main_():
-  var
-    type int: arr[10];
-    type string: str[10]: "hello";
-  begin
-    str[3] = 'a';  
-    arr[3] = 5;    
-  end

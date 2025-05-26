@@ -1,0 +1,62 @@
+Parsing completed successfully.
+DEBUG: Registering function 'Binky' with 0 parameters
+Adding array 'arr' with type 'STRING'
+DEBUG: Assigning to array 'arr' of type 'STRING'
+DEBUG Expression being assigned: name='ARRAY_ELEM', child_count=2
+  child[0]: name='arr', child_count=0
+  child[1]: name='0', child_count=0
+DEBUG: Source array 'arr' of type 'STRING'
+DEBUG: Registering function '_main_' with 0 parameters
+DEBUG: All variables in current scope:
+Starting AST generation...
+(CODE
+  (FUNC
+    Binky
+      (PARS NONE)
+      (RET NONE)
+      (BODY
+        (BLOCK
+          (BLOCK
+            (STR arr[10]:"az")
+          )
+        )
+        (BLOCK
+          (=
+            (ARRAY_ELEM
+              (arr)
+              (1)
+            )
+            (ARRAY_ELEM
+              (arr)
+              (0)
+            )
+          )
+        )
+      )
+  )
+  (FUNC
+    _main_
+      (PARS NONE)
+      (RET NONE)
+      (BODY
+        (BLOCK
+          (CALL
+            (Binky)
+            (ARGS NONE)
+          )
+        )
+      )
+  )
+)
+Generating 3AC...
+Binky:
+    BeginFunc 12
+    t0 = 0
+    t1 = arr ARRAY_ELEM t0
+    ARRAY_ELEM = t1
+    EndFunc
+_main_:
+    BeginFunc 4
+    t2 = LCall Binky
+    PopParams 0
+    EndFunc

@@ -1,0 +1,12 @@
+def Binky():
+var
+    type string:arr[10]:"az";
+begin
+    arr[1] = arr[0];
+end
+
+def _main_():
+begin
+    call Binky();
+end
+
