@@ -8,13 +8,48 @@ int temp_id = 0;
 int label_id = 1;
 int function_start_temp_id = 0; // Track temp usage per function
 
+// Type tracking for temporary variables
+#define MAX_TEMPS 1000
+typedef struct {
+    char name[20];
+    char type[20];
+    int is_used;
+} TempVar;
+
+TempVar temp_vars[MAX_TEMPS];
+int temp_var_count = 0;
+
 // Forward declarations
 char* gen_expr(Node* node);
+char* get_expr_type_codegen(Node* node);
 
 char* new_temp() {
     char* temp = (char*)malloc(10);
     sprintf(temp, "t%d", temp_id++);
     return temp;
+}
+
+char* new_typed_temp(const char* type) {
+    char* temp = new_temp();
+    
+    // Store type information for this temp
+    if (temp_var_count < MAX_TEMPS) {
+        strcpy(temp_vars[temp_var_count].name, temp);
+        strcpy(temp_vars[temp_var_count].type, type);
+        temp_vars[temp_var_count].is_used = 1;
+        temp_var_count++;
+    }
+    
+    return temp;
+}
+
+char* get_temp_type(const char* temp_name) {
+    for (int i = 0; i < temp_var_count; i++) {
+        if (strcmp(temp_vars[i].name, temp_name) == 0) {
+            return temp_vars[i].type;
+        }
+    }
+    return "INT"; // default
 }
 
 char* new_label() {
@@ -67,30 +102,86 @@ int sum_local_var_size(Node* decls) {
     return total;
 }
 
+// Enhanced function to get expression type during code generation
+char* get_expr_type_codegen(Node* node) {
+    if (!node) return strdup("INT");
+    
+    // Literals
+    if (node->child_count == 0) {
+        // Integer literal
+        if (isdigit(node->name[0]) && !strchr(node->name, '.'))
+            return strdup("INT");
+        
+        // Real literal
+        if (isdigit(node->name[0]) && strchr(node->name, '.'))
+            return strdup("REAL");
+        
+        // Character literal
+        if (node->name[0] == '\'')
+            return strdup("CHAR");
+        
+        // String literal
+        if (node->name[0] == '"')
+            return strdup("STRING");
+        
+        // Boolean literals
+        if (strcmp(node->name, "TRUE") == 0 || strcmp(node->name, "FALSE") == 0)
+            return strdup("BOOL");
+        
+        // Check if it's a temporary variable
+        if (node->name[0] == 't' && isdigit(node->name[1])) {
+            return strdup(get_temp_type(node->name));
+        }
+        
+        // Variable - look up its type (you'll need to implement this based on your symbol table)
+        // For now, return INT as default
+        return strdup("INT");
+    }
+    
+    // Arithmetic operations
+    if (strcmp(node->name, "+") == 0 || strcmp(node->name, "-") == 0 ||
+        strcmp(node->name, "*") == 0 || strcmp(node->name, "/") == 0) {
+        
+        char* left_type = get_expr_type_codegen(node->children[0]);
+        char* right_type = get_expr_type_codegen(node->children[1]);
+        
+        // If either operand is REAL, result is REAL
+        if (strcmp(left_type, "REAL") == 0 || strcmp(right_type, "REAL") == 0) {
+            free(left_type);
+            free(right_type);
+            return strdup("REAL");
+        }
+        
+        free(left_type);
+        free(right_type);
+        return strdup("INT");
+    }
+    
+    // Comparison operations always return BOOL
+    if (strcmp(node->name, "==") == 0 || strcmp(node->name, "!=") == 0 ||
+        strcmp(node->name, "<") == 0 || strcmp(node->name, ">") == 0 ||
+        strcmp(node->name, "<=") == 0 || strcmp(node->name, ">=") == 0) {
+        return strdup("BOOL");
+    }
+    
+    // Logical operations return BOOL
+    if (strcmp(node->name, "AND") == 0 || strcmp(node->name, "OR") == 0 ||
+        strcmp(node->name, "NOT") == 0 || strcmp(node->name, "BITWISE_AND") == 0 ||
+        strcmp(node->name, "BITWISE_OR") == 0 || strcmp(node->name, "BITWISE_NOT") == 0) {
+        return strdup("BOOL");
+    }
+    
+    return strdup("INT"); // default
+}
+
 // Helper function to get the size of a parameter based on its type
 int get_param_size(Node* arg) {
     if (!arg) return 4; // default
     
-    if (arg->child_count == 0) {
-        // Check if it's a literal
-        if (isdigit(arg->name[0]) && !strchr(arg->name, '.')) {
-            return 4; // INT literal
-        } else if (strchr(arg->name, '.')) {
-            return 8; // REAL literal
-        } else if (arg->name[0] == '\'') {
-            return 1; // CHAR literal
-        } else if (strcmp(arg->name, "TRUE") == 0 || strcmp(arg->name, "FALSE") == 0) {
-            return 1; // BOOL literal
-        } else if (arg->name[0] == '"') {
-            return 8; // STRING literal (pointer)
-        } else {
-            // Variable - we'd need to look up its type in the symbol table
-            // For now, assume INT (4 bytes) as default
-            return 4;
-        }
-    }
-    
-    return 4; // default for expressions
+    char* type = get_expr_type_codegen(arg);
+    int size = size_of_type(type);
+    free(type);
+    return size;
 }
 
 // Helper function to calculate total parameter size in bytes
@@ -106,6 +197,7 @@ int calculate_param_bytes(Node* args) {
     
     return total_bytes;
 }
+
 int is_literal(Node* node) {
     if (!node || node->child_count > 0) return 0;
     
@@ -214,7 +306,7 @@ void gen_stmt(Node* node) {
         }
 
         // Call the function (result not stored since it's a procedure call)
-        char* temp = new_temp();
+        char* temp = new_typed_temp("INT"); // You might want to look up function return type
         printf("    %s = LCall %s\n", temp, func_name->name);
         
         // Calculate total bytes for PopParams
@@ -233,15 +325,137 @@ char* gen_expr(Node* node) {
     if (!node) return strdup("NULL");
 
     if (node->child_count == 0) {
-        // For literals in assignments, create a temporary variable
+        // For literals in assignments, create a temporary variable with correct type
         if (is_literal(node)) {
-            char* temp = new_temp();
+            char* expr_type = get_expr_type_codegen(node);
+            char* temp = new_typed_temp(expr_type);
             printf("    %s = %s\n", temp, node->name);
+            free(expr_type);
             return temp;
         } else {
             // For identifiers, return as is
             return strdup(node->name);
         }
+    }
+
+    // SHORT-CIRCUIT EVALUATION FOR AND
+    if (strcmp(node->name, "AND") == 0 && node->child_count == 2) {
+        char* label_false = new_label();
+        char* label_end = new_label();
+        char* result_temp = new_typed_temp("BOOL");
+        
+        // Evaluate left operand
+        char* left = gen_expr(node->children[0]);
+        
+        // If left is false, short-circuit to false
+        printf("    if %s == FALSE Goto %s\n", left, label_false);
+        
+        // Left is true, evaluate right operand
+        char* right = gen_expr(node->children[1]);
+        printf("    %s = %s\n", result_temp, right);
+        printf("    Goto %s\n", label_end);
+        
+        // Short-circuit case: set result to false
+        printf("%s:\n", label_false);
+        printf("    %s = FALSE\n", result_temp);
+        
+        printf("%s:\n", label_end);
+        
+        free(left);
+        free(right);
+        free(label_false);
+        free(label_end);
+        return result_temp;
+    }
+    
+    // SHORT-CIRCUIT EVALUATION FOR OR
+    if (strcmp(node->name, "OR") == 0 && node->child_count == 2) {
+        char* label_true = new_label();
+        char* label_end = new_label();
+        char* result_temp = new_typed_temp("BOOL");
+        
+        // Evaluate left operand
+        char* left = gen_expr(node->children[0]);
+        
+        // If left is true, short-circuit to true
+        printf("    if %s == TRUE Goto %s\n", left, label_true);
+        
+        // Left is false, evaluate right operand
+        char* right = gen_expr(node->children[1]);
+        printf("    %s = %s\n", result_temp, right);
+        printf("    Goto %s\n", label_end);
+        
+        // Short-circuit case: set result to true
+        printf("%s:\n", label_true);
+        printf("    %s = TRUE\n", result_temp);
+        
+        printf("%s:\n", label_end);
+        
+        free(left);
+        free(right);
+        free(label_true);
+        free(label_end);
+        return result_temp;
+    }
+
+    // SHORT-CIRCUIT EVALUATION FOR BITWISE_AND (&&)
+    if (strcmp(node->name, "BITWISE_AND") == 0 && node->child_count == 2) {
+        char* label_false = new_label();
+        char* label_end = new_label();
+        char* result_temp = new_typed_temp("BOOL");
+        
+        // Evaluate left operand
+        char* left = gen_expr(node->children[0]);
+        
+        // If left is false, short-circuit to false
+        printf("    if %s == FALSE Goto %s\n", left, label_false);
+        
+        // Left is true, evaluate right operand
+        char* right = gen_expr(node->children[1]);
+        printf("    %s = %s\n", result_temp, right);
+        printf("    Goto %s\n", label_end);
+        
+        // Short-circuit case: set result to false
+        printf("%s:\n", label_false);
+        printf("    %s = FALSE\n", result_temp);
+        
+        printf("%s:\n", label_end);
+        
+        free(left);
+        free(right);
+        free(label_false);
+        free(label_end);
+        return result_temp;
+    }
+    
+    // SHORT-CIRCUIT EVALUATION FOR BITWISE_OR (||)
+    if (strcmp(node->name, "BITWISE_OR") == 0 && node->child_count == 2) {
+        char* label_true = new_label();
+        char* label_end = new_label();
+        char* result_temp = new_typed_temp("BOOL");
+        
+        // Evaluate left operand
+        char* left = gen_expr(node->children[0]);
+        
+        // If left is true, short-circuit to true
+        printf("    if %s == TRUE Goto %s\n", left, label_true);
+        
+        // Left is false, evaluate right operand
+        char* right = gen_expr(node->children[1]);
+        printf("    %s = %s\n", result_temp, right);
+        printf("    Goto %s\n", label_end);
+        
+        // Short-circuit case: set result to true
+        printf("%s:\n", label_true);
+        printf("    %s = TRUE\n", result_temp);
+        
+        printf("%s:\n", label_end);
+        
+        free(left);
+        free(right);
+        free(label_true);
+        free(label_end);
+        return result_temp;
     }
 
     if (strcmp(node->name, "CALL") == 0 && node->child_count == 2) {
@@ -256,7 +470,9 @@ char* gen_expr(Node* node) {
             free(arg);
         }
 
-        char* temp = new_temp();
+        // You should look up the function's return type here
+        // For now, using INT as default
+        char* temp = new_typed_temp("INT");
         printf("    %s = LCall %s\n", temp, func_name->name);
         
         // Calculate total bytes for PopParams
@@ -268,15 +484,30 @@ char* gen_expr(Node* node) {
     if (node->child_count == 2) {
         char* left = gen_expr(node->children[0]);
         char* right = gen_expr(node->children[1]);
-        char* temp = new_temp();
+        
+        // Determine result type based on operation
+        char* result_type = get_expr_type_codegen(node);
+        char* temp = new_typed_temp(result_type);
+        
         printf("    %s = %s %s %s\n", temp, left, node->name, right);
-        free(left); free(right);
+        
+        free(left); 
+        free(right);
+        free(result_type);
         return temp;
     }
 
     return strdup("UNKNOWN_EXPR");
 }
 
+// Calculate total temp variable size considering their types
+int calculate_temp_var_size() {
+    int total_size = 0;
+    for (int i = function_start_temp_id; i < temp_var_count; i++) {
+        total_size += size_of_type(temp_vars[i].type);
+    }
+    return total_size;
+}
 
 void gen_func(Node* node) {
     if (!node || node->child_count < 3) return;
@@ -287,7 +518,7 @@ void gen_func(Node* node) {
     Node* body = node->children[2];
 
     // Remember starting temp_id for this function
-    function_start_temp_id = temp_id;
+    function_start_temp_id = temp_var_count;
     
     // Calculate local variables size (only declared variables)
     int local_var_size = 0;
@@ -313,9 +544,8 @@ void gen_func(Node* node) {
         fclose(mem_file);
         stdout = original_stdout;
         
-        // Calculate how many temps were used
-        int temps_used = temp_id - function_start_temp_id;
-        int temp_var_size = temps_used * 4; // Each temp is 4 bytes (INT)
+        // Calculate temp variable size based on their actual types
+        int temp_var_size = calculate_temp_var_size();
         int total_size = local_var_size + temp_var_size;
         
         // Print BeginFunc with correct size

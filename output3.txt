@@ -101,7 +101,7 @@ L3:
     Return t3
     EndFunc
 _main_:
-    BeginFunc 24
+    BeginFunc 28
     t4 = 0
     a = t4
 L4:

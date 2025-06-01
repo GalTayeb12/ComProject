@@ -1,0 +1,25 @@
+def foo(par1 int:a; par2 int:b): returns int
+var
+    type int:sum1,sum2;
+begin
+    sum1 = 0;
+    sum2 = 0;
+    while a < b:
+    begin
+        if a == 0 or a * b < 100:
+        begin
+            sum1 = sum1 + a;
+        end
+        else:
+        begin
+            sum2 = sum2 + 1;
+        end
+        a = a + 1;
+    end
+    return sum1 + sum2;
+end
+
+def _main_():
+begin
+    call foo(2,4);
+end

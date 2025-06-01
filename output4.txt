@@ -1,0 +1,133 @@
+Parsing completed successfully.
+DEBUG: Registering function 'foo' with 2 parameters
+DEBUG: Registering function '_main_' with 0 parameters
+DEBUG: Argument 1 of function 'foo' - detected type: 'INT', expected type: 'INT'
+DEBUG: Argument 2 of function 'foo' - detected type: 'INT', expected type: 'INT'
+DEBUG: All variables in current scope:
+Starting AST generation...
+(CODE
+  (FUNC
+    foo
+      (PARS
+        (par1 INT a)
+        (par2 INT b)
+      )
+      (INT)
+      (BODY
+        (BLOCK
+          (VAR_LIST
+            (INT sum1)
+            (INT sum2)
+          )
+        )
+        (BLOCK
+          (BLOCK
+            (= sum1
+              (0)
+            )
+            (= sum2
+              (0)
+            )
+            (WHILE
+              (< a b)
+              (BLOCK
+                (BLOCK
+                  (IF-ELSE
+                    (OR
+                      (== a 0)
+                      (<
+                        (* a b)
+                        100
+                      )
+                    )
+                    (BLOCK
+                      (= sum1
+                        (+ sum1 a)
+                      )
+                    )
+                    (BLOCK
+                      (= sum2
+                        (+ sum2 1)
+                      )
+                    )
+                  )
+                  (= a
+                    (+ a 1)
+                  )
+                )
+              )
+            )
+            (RET
+              (+ sum1 sum2)
+            )
+          )
+        )
+      )
+  )
+  (FUNC
+    _main_
+      (PARS NONE)
+      (RET NONE)
+      (BODY
+        (BLOCK
+          (CALL
+            (foo)
+            (ARGS
+              (2)
+              (4)
+            )
+          )
+        )
+      )
+  )
+)
+Generating 3AC...
+foo:
+    BeginFunc 55
+    t0 = 0
+    sum1 = t0
+    t1 = 0
+    sum2 = t1
+L1:
+    if a < b Goto L2
+    Goto L3
+L2:
+    t3 = 0
+    t4 = a == t3
+    if t4 == TRUE Goto L7
+    t5 = a * b
+    t6 = 100
+    t7 = t5 < t6
+    t2 = t7
+    Goto L8
+L7:
+    t2 = TRUE
+L8:
+    if t2 Goto L4
+    Goto L5
+L4:
+    t8 = sum1 + a
+    sum1 = t8
+    Goto L6
+L5:
+    t9 = 1
+    t10 = sum2 + t9
+    sum2 = t10
+L6:
+    t11 = 1
+    t12 = a + t11
+    a = t12
+    Goto L1
+L3:
+    t13 = sum1 + sum2
+    Return t13
+    EndFunc
+_main_:
+    BeginFunc 12
+    t14 = 4
+    PushParam t14
+    t15 = 2
+    PushParam t15
+    t16 = LCall foo
+    PopParams 8
+    EndFunc
