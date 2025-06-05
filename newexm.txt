@@ -1,0 +1,30 @@
+#-> comment Long <-#
+def foo1(par1 int:a; par2 int:b; par3 int:c; par4 char:c1): returns bool
+var 
+    type bool:res;
+begin
+    var
+        type char: x,b1;
+        type int: y;
+    begin
+      b = '&';
+      #->1  a = x; <-#
+      #->2 b = 8; <-#
+      a = (y*7)/a-y;
+      #->3 a = (y*7)/b-y; <-#
+      #->4 a = (y*7)/a-c1; <-#
+      #->5 res = (b==c) and (y>a); <-#
+      #->6 res = (b==c1) and (y+a); <-#
+      #->7 3+6 = 9; <-#
+      #->8 %x =6 ;<-#
+   end 
+   return res;
+end
+
+def _main_() : 
+var 
+    type bool: x1;
+begin
+  x1 = call foo1(1,2,3,'H');
+end
+

@@ -1,0 +1,79 @@
+Parsing completed successfully.
+DEBUG: Registering function 'foo1' with 4 parameters
+DEBUG: Registering function '_main_' with 0 parameters
+DEBUG: Argument 1 of function 'foo1' - detected type: 'INT', expected type: 'INT'
+DEBUG: Argument 2 of function 'foo1' - detected type: 'INT', expected type: 'INT'
+DEBUG: Argument 3 of function 'foo1' - detected type: 'INT', expected type: 'INT'
+DEBUG: Argument 4 of function 'foo1' - detected type: 'CHAR', expected type: 'CHAR'
+DEBUG: All variables in current scope:
+Starting parsing...
+(CODE
+  (FUNC
+    foo1
+      (PARS
+        (par1 INT a)
+        (par2 INT b)
+        (par3 INT c)
+        (par4 CHAR c1)
+      )
+      (BOOL)
+      (BODY
+        (BLOCK
+          (BOOL res)
+        )
+        (BLOCK
+          (BLOCK
+            (BODY
+              (BLOCK
+                (VAR_LIST
+                  (CHAR x)
+                  (CHAR b1)
+                )
+                (INT y)
+              )
+              (BLOCK
+                (BLOCK
+                  (= b
+                    ('&')
+                  )
+                  (= a
+                    (-
+                      (/
+                        (* y 7)
+                        a
+                      )
+                      y
+                    )
+                  )
+                )
+              )
+            )
+            (RET res)
+          )
+        )
+      )
+  )
+  (FUNC
+    _main_
+      (PARS NONE)
+      (RET NONE)
+      (BODY
+        (BLOCK
+          (BOOL x1)
+        )
+        (BLOCK
+          (= x1
+            (CALL
+              (foo1)
+              (ARGS
+                (1)
+                (2)
+                (3)
+                ('H')
+              )
+            )
+          )
+        )
+      )
+  )
+)
