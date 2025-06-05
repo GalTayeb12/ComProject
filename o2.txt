@@ -1,40 +1,6 @@
 Parsing completed successfully.
-DEBUG: Registering function '_main_' with 0 parameters
+DEBUG: Registering function '_main_' with 0 parameters, return type: 'none'
 DEBUG: All variables in current scope:
-Starting AST generation...
-(CODE
-  (_main_
-    (PARS NONE)
-    (RET NONE)
-    (BODY
-      (BLOCK
-        (VAR_LIST
-          (INT x)
-          (INT y)
-        )
-        (INT m2)
-      )
-      (BLOCK
-        (BLOCK
-          (= m2
-            (+
-              (* x x)
-              (* y y)
-            )
-          )
-          (WHILE
-            (> m2 5)
-            (BLOCK
-              (= m2
-                (- m2 x)
-              )
-            )
-          )
-        )
-      )
-    )
-  )
-)
 Generating 3AC...
 _main_:
     BeginFunc 28

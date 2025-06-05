@@ -76,11 +76,26 @@ int sum_local_var_size(Node* decls) {
         for (int i = 0; i < decls->child_count; i++) {
             Node* child = decls->children[i];
             if (child->child_count == 0) {
-                // Parse "TYPE varname" format
-                char* copy = strdup(child->name);
-                char* type = strtok(copy, " ");
-                total += size_of_type(type);
-                free(copy);
+                // Parse "TYPE varname" format or handle array declarations
+                if (strncmp(child->name, "STR ", 4) == 0) {
+                    // String array declaration like "STR arr[10]"
+                    char* bracket_pos = strchr(child->name, '[');
+                    if (bracket_pos) {
+                        char* end_bracket = strchr(bracket_pos, ']');
+                        if (end_bracket) {
+                            *end_bracket = '\0';
+                            int array_size = atoi(bracket_pos + 1);
+                            total += array_size * 1; // String arrays are char arrays
+                            *end_bracket = ']';
+                        }
+                    }
+                } else {
+                    // Regular variable declaration
+                    char* copy = strdup(child->name);
+                    char* type = strtok(copy, " ");
+                    total += size_of_type(type);
+                    free(copy);
+                }
             } else {
                 // Handle nested structures
                 total += sum_local_var_size(child);
@@ -88,10 +103,24 @@ int sum_local_var_size(Node* decls) {
         }
     } else if (decls->child_count == 0) {
         // Single variable declaration
-        char* copy = strdup(decls->name);
-        char* type = strtok(copy, " ");
-        total += size_of_type(type);
-        free(copy);
+        if (strncmp(decls->name, "STR ", 4) == 0) {
+            // String array declaration
+            char* bracket_pos = strchr(decls->name, '[');
+            if (bracket_pos) {
+                char* end_bracket = strchr(bracket_pos, ']');
+                if (end_bracket) {
+                    *end_bracket = '\0';
+                    int array_size = atoi(bracket_pos + 1);
+                    total += array_size * 1; // String arrays are char arrays
+                    *end_bracket = ']';
+                }
+            }
+        } else {
+            char* copy = strdup(decls->name);
+            char* type = strtok(copy, " ");
+            total += size_of_type(type);
+            free(copy);
+        }
     } else {
         // Recursively handle child nodes
         for (int i = 0; i < decls->child_count; i++) {
@@ -210,14 +239,57 @@ int is_literal(Node* node) {
             node->name[0] == '"');
 }
 
+// Helper function to generate array element access code
+char* gen_array_access(Node* array_elem_node) {
+    if (!array_elem_node || strcmp(array_elem_node->name, "ARRAY_ELEM") != 0 || array_elem_node->child_count != 2) {
+        return strdup("ERROR");
+    }
+    
+    char* array_name = array_elem_node->children[0]->name;
+    char* index_temp = gen_expr(array_elem_node->children[1]);
+    
+    // Generate address calculation: &array + index * element_size
+    char* addr_temp = new_typed_temp("INT_PTR");
+    char* size_temp = new_typed_temp("INT");
+    char* offset_temp = new_typed_temp("INT");
+    char* final_addr_temp = new_typed_temp("INT_PTR");
+    
+    // For string arrays, element size is 1
+    printf("    %s = &%s\n", addr_temp, array_name);
+    printf("    %s = 1\n", size_temp);  // Assuming char array (size 1)
+    printf("    %s = %s * %s\n", offset_temp, index_temp, size_temp);
+    printf("    %s = %s + %s\n", final_addr_temp, addr_temp, offset_temp);
+    
+    free(index_temp);
+    free(addr_temp);
+    free(size_temp);
+    free(offset_temp);
+    
+    return final_addr_temp;
+}
+
 void gen_stmt(Node* node) {
     if (!node) return;
 
-    if (strcmp(node->name, "=") == 0 && node->child_count == 2) {
-        char* rhs = gen_expr(node->children[1]);
-        printf("    %s = %s\n", node->children[0]->name, rhs);
-        free(rhs);
+if (strcmp(node->name, "=") == 0 && node->child_count == 2) {
+    Node* lhs = node->children[0];
+    Node* rhs = node->children[1];
+    
+    // Check if LHS is an array element
+    if (strcmp(lhs->name, "ARRAY_ELEM") == 0) {
+        // Array element assignment: arr[i] = value
+        char* addr_temp = gen_array_access(lhs);
+        char* rhs_value = gen_expr(rhs);
+        printf("    *%s = %s\n", addr_temp, rhs_value);
+        free(addr_temp);
+        free(rhs_value);
+    } else {
+        // Regular variable assignment
+        char* rhs_value = gen_expr(rhs);
+        printf("    %s = %s\n", lhs->name, rhs_value);
+        free(rhs_value);
     }
+}
     else if (strcmp(node->name, "RET") == 0 && node->child_count == 1) {
         char* val = gen_expr(node->children[0]);
         printf("    Return %s\n", val);
@@ -342,6 +414,14 @@ char* gen_expr(Node* node) {
             // For identifiers, return as is
             return strdup(node->name);
         }
+    }
+        // Handle array element access
+    if (strcmp(node->name, "ARRAY_ELEM") == 0 && node->child_count == 2) {
+        char* addr_temp = gen_array_access(node);
+        char* value_temp = new_typed_temp("CHAR"); // Assuming char array
+        printf("    %s = *%s\n", value_temp, addr_temp);
+        free(addr_temp);
+        return value_temp;
     }
 
     // SHORT-CIRCUIT EVALUATION FOR AND

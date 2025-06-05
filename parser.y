@@ -2053,9 +2053,8 @@ int main() {
 
         // Debug all variables
         debug_print_all_vars();
-        printf("Starting AST generation...\n");
-
-        print_ast(root, 0); // הדפסת AST
+        //printf("Starting AST generation...\n");
+        //print_ast(root, 0); // הדפסת AST
 
         // הוספה כאן — יצירת קוד ביניים
         printf("Generating 3AC...\n");
