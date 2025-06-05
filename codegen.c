@@ -305,14 +305,20 @@ void gen_stmt(Node* node) {
             }
         }
 
-        // Call the function (result not stored since it's a procedure call)
-        char* temp = new_typed_temp("INT"); // You might want to look up function return type
-        printf("    %s = LCall %s\n", temp, func_name->name);
+        // Check if this is a procedure call or function call
+        if (is_procedure(func_name->name)) {
+            // Procedure call - no return value to store
+            printf("    LCall %s\n", func_name->name);
+        } else {
+            // Function call - create temp variable to store result (even if discarded)
+            char* temp = new_typed_temp("INT"); // You might want to get actual return type
+            printf("    %s = LCall %s\n", temp, func_name->name);
+            free(temp);
+        }
         
         // Calculate total bytes for PopParams
         int param_bytes = calculate_param_bytes(args);
         printf("    PopParams %d\n", param_bytes);
-        free(temp);
     }
     else {
         for (int i = 0; i < node->child_count; i++) {

@@ -1,6 +1,6 @@
 Parsing completed successfully.
-DEBUG: Registering function 'foo' with 1 parameters
-DEBUG: Registering function '_main_' with 0 parameters
+DEBUG: Registering function 'foo' with 1 parameters, return type: 'none'
+DEBUG: Registering function '_main_' with 0 parameters, return type: 'none'
 DEBUG: Argument 1 of function 'foo' - detected type: 'INT', expected type: 'INT'
 DEBUG: All variables in current scope:
 Starting AST generation...
@@ -52,9 +52,9 @@ foo:
     x = t1
     EndFunc
 _main_:
-    BeginFunc 8
+    BeginFunc 4
     t2 = 137
     PushParam t2
-    t3 = LCall foo
+    LCall foo
     PopParams 4
     EndFunc

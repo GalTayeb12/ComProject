@@ -1,6 +1,6 @@
 Parsing completed successfully.
-DEBUG: Registering function 'foo' with 1 parameters
-DEBUG: Registering function '_main_' with 0 parameters
+DEBUG: Registering function 'foo' with 1 parameters, return type: 'INT'
+DEBUG: Registering function '_main_' with 0 parameters, return type: 'none'
 DEBUG: Argument 1 of function 'foo' - detected type: 'REAL', expected type: 'REAL'
 DEBUG: All variables in current scope:
 Starting AST generation...

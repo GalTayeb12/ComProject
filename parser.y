@@ -65,8 +65,9 @@ int dereference_type_error = 0;
 
 
 
-void add_function(char* name, int param_count, Node* params) {
-    printf("DEBUG: Registering function '%s' with %d parameters\n", name, param_count);
+void add_function(char* name, int param_count, Node* params, char* ret_type) {
+    printf("DEBUG: Registering function '%s' with %d parameters, return type: '%s'\n", 
+           name, param_count, ret_type ? ret_type : "none");
     if (is_function_defined(name) != 0) {
         duplicate_function_error = 1;
         yyerror("Error: Function already defined");
@@ -77,14 +78,18 @@ void add_function(char* name, int param_count, Node* params) {
         function_table[function_count].name = strdup(name);
         function_table[function_count].param_count = param_count;
         
-        // Allocate and store parameter types
+        // Store return type
+        if (ret_type && strlen(ret_type) > 0) {
+            function_table[function_count].return_type = strdup(ret_type);
+        } else {
+            function_table[function_count].return_type = NULL; // Procedure
+        }
+        
+        // Allocate and store parameter types (existing code)
         if (param_count > 0) {
             function_table[function_count].param_types = (char**)malloc(sizeof(char*) * param_count);
             
-            // Extract parameter types from params node
             for (int i = 0; i < param_count; i++) {
-                // Parse parameter string to extract type
-                // Assuming format: "parSOMETHING TYPE NAME"
                 char* param_str = params->children[i]->name;
                 char* type_start = strchr(param_str, ' ') + 1;
                 char* type_end = strchr(type_start, ' ');
@@ -102,6 +107,17 @@ void add_function(char* name, int param_count, Node* params) {
         
         function_count++;
     }
+}
+
+int is_procedure(const char* func_name) {
+    for (int i = 0; i < function_count; i++) {
+        if (strcmp(function_table[i].name, func_name) == 0) {
+            // Return 1 if return_type is NULL or empty (procedure)
+            return (function_table[i].return_type == NULL || 
+                    strlen(function_table[i].return_type) == 0);
+        }
+    }
+    return 1; // If function not found, assume it's a procedure to be safe
 }
 
 void check_param_types(const char* func_name, Node* args_node, int line) {
@@ -831,7 +847,7 @@ func_header
               add_var(name_start, type); 
           }
       }
-      add_function($2, param_count, params);
+      add_function($2, param_count, params, $8->name); // Pass return type
       $$ = create_node($2, 2, params, ret_type_node);
   }
   | DEF IDENTIFIER '(' parameters ')' ':' {
@@ -870,7 +886,7 @@ func_header
           }
       }
       
-      add_function($2, param_count, params);
+      add_function($2, param_count, params, NULL); // NULL for procedures
       $$ = create_node($2, 2, params, ret_type_node);
   }
 ;

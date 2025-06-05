@@ -11,6 +11,7 @@ typedef struct {
     char* name;
     int param_count;
     char** param_types;
+    char* return_type;
 } FunctionInfo;
 
 typedef struct {
@@ -23,7 +24,7 @@ void print_ast(Node* node, int depth);
 void free_ast(Node* node);
 
 // Semantic checks
-void add_function(char* name, int param_count, Node* params);
+void add_function(char* name, int param_count, Node* params, char* ret_type);
 int is_function_defined(const char* name);
 int get_function_param_count(const char* name);
 void check_param_count(const char* func_name, int provided_count, int line);
@@ -37,6 +38,7 @@ char* get_expr_type(Node* expr);
 void gen_code(Node* root);
 char* new_temp();
 char* new_label();
+int is_procedure(const char* func_name);
 
 #endif
 

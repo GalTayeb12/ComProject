@@ -1,12 +1,12 @@
 Parsing completed successfully.
-DEBUG: Registering function 'Binky' with 0 parameters
+DEBUG: Registering function 'Binky' with 0 parameters, return type: 'none'
 Adding array 'arr' with type 'STRING'
 DEBUG: Assigning to array 'arr' of type 'STRING'
 DEBUG Expression being assigned: name='ARRAY_ELEM', child_count=2
   child[0]: name='arr', child_count=0
   child[1]: name='0', child_count=0
 DEBUG: Source array 'arr' of type 'STRING'
-DEBUG: Registering function '_main_' with 0 parameters
+DEBUG: Registering function '_main_' with 0 parameters, return type: 'none'
 DEBUG: All variables in current scope:
 Starting AST generation...
 (CODE
@@ -56,7 +56,7 @@ Binky:
     ARRAY_ELEM = t1
     EndFunc
 _main_:
-    BeginFunc 4
-    t2 = LCall Binky
+    BeginFunc 0
+    LCall Binky
     PopParams 0
     EndFunc
