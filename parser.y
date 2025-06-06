@@ -1,3 +1,4 @@
+//Noam Dahan 318821774, Gal Tayeb 207338104, Noam Kadosh 207328428
 %{
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,7 +33,7 @@ char current_return_type[20] = "";
 char return_type_to_push[20] = "";
 int current_func_has_return = 0;
 
-// דגלים חכמים
+
 int param_error = 0;
 int comma_error = 0;
 int return_type_error = 0;
@@ -211,27 +212,22 @@ void check_param_count(const char* func_name, int provided_count, int line) {
     }
 }
 
-// Check if variable exists in current scope (including function parameters)
-// Check if variable exists in current scope
+
 int is_var_defined(const char* name) {
-    // More detailed debugging
     // printf("Checking if '%s' is defined (var_count = %d)\n", name, var_count);
-    
-    // First check if it's a function name
+
     if (is_function_defined(name) != 0) {
         // printf("'%s' is a function\n", name);
         return 1;  // Consider function names as "defined"
     }
-    
-    // Then check variable names
+
     for (int i = 0; i < var_count; i++) {
         if (var_names[i] && strcmp(var_names[i], name) == 0) {
             // printf("'%s' is a defined variable\n", name);
             return 1;
         }
     }
-    
-    // Special case for function parameters being used in the function body
+
     if (function_count > 0) {
         FunctionInfo* last_func = &function_table[function_count-1];
         if (last_func->param_count > 0) {
@@ -303,12 +299,11 @@ void clear_vars() {
 
 int check_function_call(const char* name, int line) {
     if (is_function_defined(name) == 0) {
-        return 0;  // Function not found
+        return 0;
     }
-    return 1;  // Function found
+    return 1;
 }
 void check_var_use(const char* name, int line) {
-    // Skip check if this is a predefined identifier or in debug mode
     if (strcmp(name, "_main_") == 0 || is_function_defined(name) != 0 || debug_mode) {
         return;  // Skip the check in debug mode
     }
@@ -323,19 +318,16 @@ void check_var_use(const char* name, int line) {
 
 int is_bool_expr(Node* expr) {
     if (!expr) return 0;
-    
-    // Direct boolean literals
+
     if (strcmp(expr->name, "TRUE") == 0 || strcmp(expr->name, "FALSE") == 0)
         return 1;
-    
-    // Variable of type BOOL
+
     if (expr->child_count == 0) {
         char* var_type = get_var_type(expr->name);
         if (var_type && strcmp(var_type, "BOOL") == 0)
             return 1;
     }
-    
-    // Boolean operations
+
     if (strcmp(expr->name, "AND") == 0 || strcmp(expr->name, "OR") == 0 ||
         strcmp(expr->name, "NOT") == 0 || strcmp(expr->name, "BITWISE_NOT") == 0 ||
         strcmp(expr->name, "BITWISE_OR") == 0 ||
@@ -351,20 +343,17 @@ int is_bool_expr(Node* expr) {
 
 int is_int_expr(Node* expr) {
     if (!expr) return 0;
-    
-    // Direct integer literals
+
     if (expr->child_count == 0) {
         // If it's a numeric literal without decimal point
         if (isdigit(expr->name[0]) && !strchr(expr->name, '.'))
             return 1;
-        
-        // Check if it's a variable identifier of type INT
+
         char* var_type = get_var_type(expr->name);
         if (var_type && strcmp(var_type, "INT") == 0)
             return 1;
     }
-    
-    // Arithmetic operations are integer expressions if operands are integers
+
     if (strcmp(expr->name, "+") == 0 || strcmp(expr->name, "-") == 0 ||
         strcmp(expr->name, "*") == 0 || strcmp(expr->name, "/") == 0) {
         // For simplicity, we'll just return 1 for arithmetic operations
@@ -376,17 +365,14 @@ int is_int_expr(Node* expr) {
 
 int is_string_expr(Node* expr) {
     if (!expr) return 0;
-    
-    // Direct string literals
+
     if (expr->child_count == 0 && expr->name[0] == '"')
         return 1;
-    
-    // For this basic check, we'll assume other expressions are not strings
+
     return 0;
 }
 
 char* extract_param_name(const char* param_str) {
-    // Assuming format: "parSOMETHING TYPE NAME"
     char* last_space = strrchr(param_str, ' ');
     if (last_space) {
         return last_space + 1;  // Return pointer to the name
@@ -394,13 +380,10 @@ char* extract_param_name(const char* param_str) {
     return NULL;  // Error case
 }
 
-// Add this function near other is_xxx_defined functions
 int is_parameter(const char* name) {
-    // Look through the most recently defined function
     if (function_count > 0) {
         FunctionInfo* current_func = &function_table[function_count-1];
-        
-        // If the function has parameters, check if 'name' is one of them
+
         if (current_func->param_count > 0 && current_func->param_types != NULL) {
             for (int i = 0; i < var_count; i++) {
                 if (strcmp(var_names[i], name) == 0)
@@ -420,7 +403,6 @@ char* get_var_type(const char* name) {
     return NULL;
 }
 
-// Debug function - enable when needed
 void debug_print_vars(const char* location) {
     printf("=== Variables at %s ===\n", location);
     for (int i = 0; i < var_count; i++) {
@@ -447,7 +429,7 @@ void debug_print_all_vars() {
                i, var_info[i].name, var_info[i].type);
     }
 }
-// מחסנית טיפוסי חזרה
+
 void push_return_type(const char* type) {
     if (++stack_top < MAX_DEPTH) {
         strcpy(return_type_stack[stack_top], type);
@@ -465,11 +447,9 @@ void pop_return_type() {
     }
 }
 
-// Add this to your C code section at the top
 char* get_expr_type(Node* expr) {
     if (!expr) return NULL;
-    
-    // Direct literals
+
     if (expr->child_count == 0) {
         // Integer literal
         if (isdigit(expr->name[0]) && !strchr(expr->name, '.'))
@@ -630,8 +610,7 @@ char* get_expr_type(Node* expr) {
         char* right_type = get_expr_type(expr->children[1]);
         
         if (!left_type || !right_type) return NULL;
-        
-        // Types must match (or be compatible)
+
         if (strcmp(left_type, right_type) != 0 &&
             !((strcmp(left_type, "INT") == 0 && strcmp(right_type, "REAL") == 0) ||
               (strcmp(left_type, "REAL") == 0 && strcmp(right_type, "INT") == 0))) {
@@ -656,16 +635,14 @@ char* get_expr_type(Node* expr) {
         
         return "INT";
     }
-    
-    // Function calls - would need to look up the function's return type
+
     if (strcmp(expr->name, "CALL") == 0) {
-        // For this simple version, we'll just return a valid type
         return "INT"; // Or implement proper function return type lookup
     }
     
     return NULL; // Unknown expression type
 }
-// בדיקת התאמת סוג RETURN
+
 int check_return_type(Node* expr_node) {
     if (!expr_node) return 1;
 
@@ -674,11 +651,9 @@ int check_return_type(Node* expr_node) {
         return 0;
     }
 
-    // קריאה לפונקציה תמיד חוקי
     if (strcmp(expr_node->name, "CALL") == 0)
         return 1;
 
-    // משתנה
     if (expr_node->child_count == 0 && !isdigit(expr_node->name[0]) &&
         expr_node->name[0] != '\'' && expr_node->name[0] != '"' &&
         strcmp(expr_node->name, "TRUE") != 0 &&
@@ -708,7 +683,6 @@ int check_return_type(Node* expr_node) {
         strcmp(current_return_type, "CHAR_PTR") == 0))
         return 1;
 
-    // אופרטורים בסיסיים
     if (strcmp(expr_node->name, "+") == 0 || strcmp(expr_node->name, "-") == 0 ||
         strcmp(expr_node->name, "*") == 0 || strcmp(expr_node->name, "/") == 0)
         return 1;
@@ -717,7 +691,6 @@ int check_return_type(Node* expr_node) {
     return 0;
 }
 
-// בדיקה אם פונקציה מסתיימת ב-RETURN
 int ends_with_return(Node* node) {
     if (!node) return 0;
     if (strcmp(node->name, "BLOCK") == 0 || strcmp(node->name, "BODY") == 0) {
@@ -754,7 +727,6 @@ int ends_with_return(Node* node) {
     var_decls optional_var_list var_decl_list var_single_decl var_init_list string_decl_list string_decl body
     id_list
 
-// קדימויות ואסוציאטיביות
 
 %left OR BITWISE_OR
 %left AND BITWISE_AND
@@ -788,7 +760,7 @@ func
       }
       $$ = create_node($1->name, 3, $1->children[0], $1->children[1], create_node("BODY", 2, $2, $3));
       pop_return_type();
-      clear_vars(); // Clear variables after the function is fully processed
+      clear_vars();
   }
 ;
 
@@ -800,7 +772,7 @@ nested_func
       }
       $$ = create_node($1->name, 3, $1->children[0], $1->children[1], create_node("BODY", 2, $2, $3));
       pop_return_type();
-      clear_vars(); // Clear variables after the function is fully processed
+      clear_vars();
   }
 ;
 
@@ -839,8 +811,7 @@ func_header
       push_return_type(""); 
       Node* params = $4;
       Node* ret_type_node = create_node("RET NONE", 0);
-      
-      // Check if this is the main function
+
       if (strcmp($2, "_main_") == 0) {
           has_main = 1;  // Set the flag that we've found main
           
@@ -879,8 +850,7 @@ parameters
   : parameter ';' parameters {
       Node* pars = create_node("PARS", $3->child_count + 1);
       pars->children[0] = $1;
-      
-      // Check if parameter is in correct order
+
       char* param_str = $1->name;
       int param_index = 1; // First parameter should be par1
       /*
@@ -891,8 +861,7 @@ parameters
       
       for (int i = 0; i < $3->child_count; i++) {
           pars->children[i+1] = $3->children[i];
-          
-          // Check each parameter in the list
+
           param_str = $3->children[i]->name;
           param_index = i + 2; // Next parameters should be par2, par3, etc.
           /*
@@ -1184,9 +1153,8 @@ stmt
       check_var_use($2, yylineno);
       array_pointer_arithmetic_error = 1;
       yyerror("Cannot add anything to array elements - they are not pointers");
-      $$ = create_node("ERROR", 0);}
-;
-/* הצהרות משתנים (var_decls וכו') */
+      $$ = create_node("ERROR", 0);
+  };
 
 var_decls
   : VAR optional_var_list { $$ = $2; }
@@ -1211,16 +1179,13 @@ var_decl_list
 
 var_single_decl
   : TYPE BOOL ':' IDENTIFIER ',' IDENTIFIER ';' {
-      // Handle this specific case: type bool:c,d;
-      add_var($4, "BOOL");  // Add first variable with type
-      add_var($6, "BOOL");  // Add second variable with type
-      
-      // Create nodes for both variables
+      add_var($4, "BOOL");
+      add_var($6, "BOOL");
+
       char temp1[100], temp2[100];
       sprintf(temp1, "BOOL %s", $4);
       sprintf(temp2, "BOOL %s", $6);
-      
-      // Create a list of bool declarations
+
       Node* var_list = create_node("VAR_LIST", 2);
       var_list->children[0] = create_node(temp1, 0);
       var_list->children[1] = create_node(temp2, 0);
@@ -1228,21 +1193,18 @@ var_single_decl
       $$ = var_list;
   }
   | TYPE type ':' id_list ';' {
-      // Regular type declarations without initialization
       char* type_name = $2->name;
       
       if ($4->child_count == 0) {
-          // Single variable declaration
-          add_var($4->name, type_name);  // Add with type
+          add_var($4->name, type_name);
           
           char temp[100];
           sprintf(temp, "%s %s", type_name, $4->name);
           $$ = create_node(temp, 0);
       } else {
-          // Multiple variable declarations
           Node* var_list = create_node("VAR_LIST", $4->child_count);
           for (int i = 0; i < $4->child_count; i++) {
-              add_var($4->children[i]->name, type_name);  // Add each with type
+              add_var($4->children[i]->name, type_name);
               
               char temp[100];
               sprintf(temp, "%s %s", type_name, $4->children[i]->name);
@@ -1252,7 +1214,6 @@ var_single_decl
       }
   }
   | TYPE type ':' IDENTIFIER ':' expr ';' {
-      // Variable with initialization
       add_var($4, $2->name);  // Add variable with type
       
       char temp[100];
@@ -1261,22 +1222,19 @@ var_single_decl
       $$ = create_node("=", 2, var_node, $6);
   }
   | TYPE BOOL ':' var_init_list ';' {
-      // This is handled in var_init_list
       $$ = $4;
   }
-  | TYPE BOOL ':' IDENTIFIER ';' {  // Single boolean without initialization
-      add_var($4, "BOOL");  // Add with type
+  | TYPE BOOL ':' IDENTIFIER ';' {
+      add_var($4, "BOOL");
       
       char temp[100];
       sprintf(temp, "BOOL %s", $4);
       $$ = create_node(temp, 0);
   }
   | TYPE type ':' string_decl_list ';' {
-    // Process each array declaration with the correct type
     for (int i = 0; i < $4->child_count; i++) {
         Node* array_node = $4->children[i];
-        
-        // Extract array name from the node name 
+
         if (strncmp(array_node->name, "STR ", 4) == 0) {
             char* name_start = array_node->name + 4;
             char* bracket_pos = strchr(name_start, '[');
@@ -1287,8 +1245,7 @@ var_single_decl
                 array_name[name_len] = '\0';
                 
                 printf("Adding array '%s' with type '%s'\n", array_name, $2->name);
-                
-                // Add the array with its correct type
+
                 add_var(array_name, $2->name);
                 free(array_name);
             }
@@ -1303,10 +1260,8 @@ id_list
       $$ = create_node($1, 0);  
   }
   | IDENTIFIER ',' id_list {
-      // Create a node for this identifier
       Node* id_node = create_node($1, 0);
-      
-      // Create a list
+
       Node* merged;
       if ($3->child_count == 0) {
           merged = create_node("ID_LIST", 2, id_node, $3);
@@ -1324,7 +1279,7 @@ id_list
 
 var_init_list
   : IDENTIFIER ':' expr {
-      add_var($1, "BOOL");  // Add boolean variable
+      add_var($1, "BOOL");
       
       char temp[100];
       sprintf(temp, "BOOL %s", $1);
@@ -1332,7 +1287,7 @@ var_init_list
       $$ = create_node("=", 2, var_node, $3);
   }
   | IDENTIFIER ':' expr ',' var_init_list {
-      add_var($1, "BOOL");  // Add boolean variable
+      add_var($1, "BOOL");
       
       char temp[100];
       sprintf(temp, "BOOL %s", $1);
@@ -1346,7 +1301,6 @@ var_init_list
   }
 ;
 
-/* אתחול משתנים מסוג מחרוזת */
 string_decl_list
   : string_decl_list ',' string_decl {
       Node* merged = create_node("BLOCK", $1->child_count + 1);
@@ -1365,27 +1319,22 @@ string_decl
       char temp[100];
       sprintf(temp, "STR %s[%s]", $1, $3);
       $$ = create_node(temp, 0);
-      // Do NOT add the variable here - it will be added in the parent rule
   }
   | IDENTIFIER '[' INT_LITERAL ']' ':' STRING_LITERAL {
       char temp[100];
       sprintf(temp, "STR %s[%s]:%s", $1, $3, $6);
       $$ = create_node(temp, 0);
-      // Do NOT add the variable here - it will be added in the parent rule
   }
 ;
 
-/* ביטויים מתמטיים ולוגיים */
 expr 
   : expr ADD expr { 
     Node* node = create_node("+", 2, $1, $3);
-    
-    // Type checking
+
     char* left_type = get_expr_type($1);
     char* right_type = get_expr_type($3);
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             arith_type_error = 1;
@@ -1397,13 +1346,11 @@ expr
   }
   | expr SUB expr { 
     Node* node = create_node("-", 2, $1, $3);
-    
-    // Type checking
+
     char* left_type = get_expr_type($1);
     char* right_type = get_expr_type($3);
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             arith_type_error = 1;
@@ -1415,13 +1362,11 @@ expr
   }
   | expr MUL expr { 
     Node* node = create_node("*", 2, $1, $3);
-    
-    // Type checking
+
     char* left_type = get_expr_type($1);
     char* right_type = get_expr_type($3);
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             arith_type_error = 1;
@@ -1433,13 +1378,11 @@ expr
   }
   | expr DIV expr { 
     Node* node = create_node("/", 2, $1, $3);
-    
-    // Type checking
+
     char* left_type = get_expr_type($1);
     char* right_type = get_expr_type($3);
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             arith_type_error = 1;
@@ -1451,13 +1394,11 @@ expr
   }
   | expr EQ expr { 
     Node* node = create_node("==", 2, $1, $3);
-    
-    // Type checking
+
     char* left_type = get_expr_type($1);
     char* right_type = get_expr_type($3);
     
     if (left_type && right_type) {
-        // Types must be compatible
         if (strcmp(left_type, right_type) != 0 &&
             !((strcmp(left_type, "INT") == 0 && strcmp(right_type, "REAL") == 0) ||
               (strcmp(left_type, "REAL") == 0 && strcmp(right_type, "INT") == 0))) {
@@ -1470,13 +1411,11 @@ expr
   }
   | expr NE expr { 
     Node* node = create_node("!=", 2, $1, $3);
-    
-    // Type checking
+
     char* left_type = get_expr_type($1);
     char* right_type = get_expr_type($3);
     
     if (left_type && right_type) {
-        // Types must be compatible
         if (strcmp(left_type, right_type) != 0 &&
             !((strcmp(left_type, "INT") == 0 && strcmp(right_type, "REAL") == 0) ||
               (strcmp(left_type, "REAL") == 0 && strcmp(right_type, "INT") == 0))) {
@@ -1489,13 +1428,11 @@ expr
   }
   | expr GT expr { 
     Node* node = create_node(">", 2, $1, $3);
-    
-    // Type checking
+
     char* left_type = get_expr_type($1);
     char* right_type = get_expr_type($3);
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             comparison_type_error = 1;
@@ -1507,13 +1444,11 @@ expr
   }
   | expr GE expr { 
     Node* node = create_node(">=", 2, $1, $3);
-    
-    // Type checking
+
     char* left_type = get_expr_type($1);
     char* right_type = get_expr_type($3);
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             comparison_type_error = 1;
@@ -1525,13 +1460,11 @@ expr
   }
   | expr LT expr { 
     Node* node = create_node("<", 2, $1, $3);
-    
-    // Type checking
+
     char* left_type = get_expr_type($1);
     char* right_type = get_expr_type($3);
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             comparison_type_error = 1;
@@ -1543,13 +1476,11 @@ expr
   }
   | expr LE expr { 
     Node* node = create_node("<=", 2, $1, $3);
-    
-    // Type checking
+
     char* left_type = get_expr_type($1);
     char* right_type = get_expr_type($3);
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             comparison_type_error = 1;
@@ -1562,7 +1493,6 @@ expr
   
   | expr AND expr { 
       Node* node = create_node("AND", 2, $1, $3);
-      // Type checking...
       char* left_type = get_expr_type($1);
       char* right_type = get_expr_type($3);
       
@@ -1576,7 +1506,6 @@ expr
   }
   | expr BITWISE_AND expr { 
       Node* node = create_node("BITWISE_AND", 2, $1, $3);
-      // Type checking...
       char* left_type = get_expr_type($1);
       char* right_type = get_expr_type($3);
       
@@ -1590,7 +1519,6 @@ expr
   }
   | expr OR expr { 
       Node* node = create_node("OR", 2, $1, $3);
-      // Type checking...
       char* left_type = get_expr_type($1);
       char* right_type = get_expr_type($3);
       
@@ -1604,7 +1532,6 @@ expr
   }
   | expr BITWISE_OR expr {
       Node* node = create_node("BITWISE_OR", 2, $1, $3);
-      // Type checking...
       char* left_type = get_expr_type($1);
       char* right_type = get_expr_type($3);
       
@@ -1618,7 +1545,6 @@ expr
   }
   | NOT expr { 
       Node* node = create_node("NOT", 1, $2);
-      // Type checking...
       char* operand_type = get_expr_type($2);
       
       if (operand_type) {
@@ -1631,8 +1557,7 @@ expr
   }
   | BITWISE_NOT expr { 
       Node* node = create_node("BITWISE_NOT", 1, $2);
-      
-      // Type checking - operand must be boolean
+
       char* operand_type = get_expr_type($2);
       
       if (operand_type) {
@@ -1649,11 +1574,9 @@ expr
   | SUB expr %prec UMINUS { $$ = create_node("-", 2, create_node("0", 0), $2); }
   | MUL IDENTIFIER { 
     check_var_use($2, yylineno);
-    
-    // Get variable type
+
     char* var_type = get_var_type($2);
-    
-    // Check if it's a pointer type
+
     if (var_type) {
         if (strcmp(var_type, "INT_PTR") != 0 && 
             strcmp(var_type, "REAL_PTR") != 0 && 
@@ -1683,17 +1606,14 @@ expr
   }
   | ADDR IDENTIFIER { 
     check_var_use($2, yylineno);
-    
-    // Get the variable type
+
     char* var_type = get_var_type($2);
-    
-    // Check if it's a valid type for address-of
+
     if (var_type) {
         if (strcmp(var_type, "INT") != 0 && 
             strcmp(var_type, "REAL") != 0 && 
             strcmp(var_type, "CHAR") != 0 && 
             strcmp(var_type, "STRING") != 0) {
-            // Error: Can't take address of this type
             printf("Semantic error at line %d: Cannot take address of variable of type '%s'\n", 
                    yylineno, var_type);
             yytext = $2; // Store the variable name for error message
@@ -1705,26 +1625,21 @@ expr
   }
   | ADDR IDENTIFIER '[' expr ']' { 
     check_var_use($2, yylineno);
-    
-    // Check if index is valid (integer)
+
     if (!is_int_expr($4)) {
         array_index_error = 1;
         yyerror("Array index must be of integer type");
     }
-    
-    // Create array element node
+
     Node* arr_elem = create_node("ARRAY_ELEM", 2, create_node($2, 0), $4);
-    
-    // Create address-of node
+
     $$ = create_node("&", 1, arr_elem); 
   }
-  | ADDR '(' expr ')' { 
-    // This should always produce an error
+  | ADDR '(' expr ')' {
     yyerror("Cannot take address of an expression");
     $$ = create_node("ERROR", 0);
   }
-  | MUL '(' expr ')' { 
-    // Type checking - operand must be a pointer
+  | MUL '(' expr ')' {
     char* expr_type = get_expr_type($3);
     
     if (expr_type) {
@@ -1745,14 +1660,12 @@ expr
   }
   | IDENTIFIER '(' args ')' { 
     int func_found = check_function_call($1, yylineno);
-    
-    // Count arguments
+
     int arg_count = 0;
     if (strcmp($3->name, "ARGS NONE") != 0) {
         arg_count = $3->child_count;
     }
-    
-    // Check parameter count even if function is not declared
+
     int required_count = get_function_param_count($1);
     if (required_count >= 0 && required_count != arg_count) {
         param_count_mismatch = 1;
@@ -1761,14 +1674,12 @@ expr
         yyerror("Parameter count mismatch");
     } 
     else if (!func_found) {
-        // Only trigger undeclared function error if param count was correct
         undeclared_function_error = 1;
         sprintf(yytext, "%s", $1);
         yylineno = @1.first_line;
         yyerror("Function called before declaration");
     }
     else {
-        // If function exists and param count is correct, check param types
         check_param_types($1, $3, yylineno);
     }
     
@@ -1776,24 +1687,20 @@ expr
   }
   | IDENTIFIER '[' expr ']' { 
     check_var_use($1, yylineno);
-    
-    // Check if the index expression is a REAL literal or identifier
+
     if ($3->child_count == 0) {
-        // Check if it's a REAL literal
         if (strchr($3->name, '.')) {
             array_index_error = 1;
             yyerror("Array index must be of integer type");
         }
-        
-        // Check if it's a variable of type REAL
+
         char* var_type = get_var_type($3->name);
         if (var_type && strcmp(var_type, "REAL") == 0) {
             array_index_error = 1;
             yyerror("Array index must be of integer type");
         }
     }
-    
-    // String expressions as array indices
+
     if (is_string_expr($3)) {
         string_index_error = 1;
         yyerror("String expressions cannot be used as array indices");
@@ -1814,8 +1721,7 @@ expr
   | NULL_T { $$ = create_node("NULL", 0); }
   | PIPE_SYMBOL IDENTIFIER PIPE_SYMBOL { 
 	    check_var_use($2, yylineno);
-	    
-	    // Type checking - the operand must be a string
+
 	    char* var_type = get_var_type($2);
 	    if (var_type && strcmp(var_type, "STRING") != 0) {
 		length_type_error = 1;
@@ -1831,7 +1737,6 @@ expr
   }
 ;
 
-/* קריאות לפונקציה: ארגומנטים */
 args 
   : expr { $$ = create_node("ARGS", 1, $1); }
   | expr ',' args {
@@ -1850,7 +1755,6 @@ args
 
 %%
 
-/* הדפסת שגיאות יפות */
 void yyerror(const char* s) {
     if (comma_error) {
         printf("Syntax error at line %d: parameters must be separated by semicolon\n", yylineno);
@@ -1868,8 +1772,7 @@ void yyerror(const char* s) {
         printf("Syntax error at line %d: no type defined\n", yylineno);
         param_error = 0;
     }
-    
-    
+
     else if (return_type_error) {
         printf("Semantic error at line %d: Return type mismatch\n", yylineno);
         return_type_error = 0;
@@ -1979,7 +1882,6 @@ void yyerror(const char* s) {
     exit(1);
 }
 
-/* MAIN שמריץ את ה-parser */
 int main() {
     printf("Parsing completed successfully.\n");
     if (yyparse() == 0) {
