@@ -1,0 +1,4 @@
+Parsing completed successfully.
+DEBUG: Registering function 'foo1' with 4 parameters
+Semantic error at line 12: Arithmetic operators require numeric operands
+Debug: Error at token ';'

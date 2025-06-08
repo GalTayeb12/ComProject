@@ -996,127 +996,93 @@ stmt
       $$ = create_node("RET", 0);
   }
   | IDENTIFIER ASSIGN expr ';' {
-    check_var_use($1, yylineno);
-    $$ = create_node("=", 2, create_node($1, 0), $3);
+      check_var_use($1, yylineno);
+      char* left_type = get_var_type($1);
+      char* right_type = get_expr_type($3);
+      if (left_type && right_type && strcmp(left_type, right_type) != 0) {
+          if (!((strcmp(left_type, "INT") == 0 && strcmp(right_type, "REAL") == 0) ||
+                (strcmp(left_type, "REAL") == 0 && strcmp(right_type, "INT") == 0))) {
+              arith_type_error = 1;
+              yyerror("Type mismatch in assignment");
+          }
+      }
+      $$ = create_node("=", 2, create_node($1, 0), $3);
   }
   | IDENTIFIER ASSIGN CALL IDENTIFIER '(' args ')' ';' {
-    check_var_use($1, yylineno);
-    
-    int func_found = check_function_call($4, yylineno);
-    
-    // Count arguments
-    int arg_count = 0;
-    if (strcmp($6->name, "ARGS NONE") != 0) {
-        arg_count = $6->child_count;
-    }
-
-    int required_count = get_function_param_count($4);
-    if (required_count >= 0 && required_count != arg_count) {
-        param_count_mismatch = 1;
-        sprintf(yytext, "%s", $4);
-        yylineno = @4.first_line;
-        yyerror("Parameter count mismatch");
-    } 
-    else if (!func_found) {
-        undeclared_function_error = 1;
-        sprintf(yytext, "%s", $4);
-        yylineno = @4.first_line;
-        yyerror("Function called before declaration");
-    }
-    else {
-        check_param_types($4, $6, yylineno);
-    }
-    
-    Node* call_node = create_node("CALL", 2, create_node($4, 0), $6);
-    $$ = create_node("=", 2, create_node($1, 0), call_node);
-}
+      check_var_use($1, yylineno);
+      int func_found = check_function_call($4, yylineno);
+      int arg_count = (strcmp($6->name, "ARGS NONE") != 0) ? $6->child_count : 0;
+      int required_count = get_function_param_count($4);
+      if (required_count >= 0 && required_count != arg_count) {
+          param_count_mismatch = 1;
+          sprintf(yytext, "%s", $4);
+          yylineno = @4.first_line;
+          yyerror("Parameter count mismatch");
+      } else if (!func_found) {
+          undeclared_function_error = 1;
+          sprintf(yytext, "%s", $4);
+          yylineno = @4.first_line;
+          yyerror("Function called before declaration");
+      } else {
+          check_param_types($4, $6, yylineno);
+      }
+      Node* call_node = create_node("CALL", 2, create_node($4, 0), $6);
+      $$ = create_node("=", 2, create_node($1, 0), call_node);
+  }
   | CALL IDENTIFIER '(' args ')' ';' {
-    int func_found = check_function_call($2, yylineno);
-
-    int arg_count = 0;
-    if (strcmp($4->name, "ARGS NONE") != 0) {
-        arg_count = $4->child_count;
-    }
-
-    int required_count = get_function_param_count($2);
-    if (required_count >= 0 && required_count != arg_count) {
-        param_count_mismatch = 1;
-        sprintf(yytext, "%s", $2);  // Store function name for error
-        yylineno = @2.first_line;  // Use the line number of function name token
-        yyerror("Parameter count mismatch");
-    } 
-    else if (!func_found) {
-        undeclared_function_error = 1;
-        sprintf(yytext, "%s", $2);
-        yylineno = @2.first_line;
-        yyerror("Function called before declaration");
-    }
-    else {
-        check_param_types($2, $4, yylineno);
-    }
-    
-    $$ = create_node("CALL", 2, create_node($2, 0), $4);
-}
+      int func_found = check_function_call($2, yylineno);
+      int arg_count = (strcmp($4->name, "ARGS NONE") != 0) ? $4->child_count : 0;
+      int required_count = get_function_param_count($2);
+      if (required_count >= 0 && required_count != arg_count) {
+          param_count_mismatch = 1;
+          sprintf(yytext, "%s", $2);
+          yylineno = @2.first_line;
+          yyerror("Parameter count mismatch");
+      } else if (!func_found) {
+          undeclared_function_error = 1;
+          sprintf(yytext, "%s", $2);
+          yylineno = @2.first_line;
+          yyerror("Function called before declaration");
+      } else {
+          check_param_types($2, $4, yylineno);
+      }
+      $$ = create_node("CALL", 2, create_node($2, 0), $4);
+  }
   | IDENTIFIER '[' expr ']' ASSIGN expr ';' {
-    check_var_use($1, yylineno);
-    if (is_string_expr($3)) {
-        string_index_error = 1;
-        yyerror("String expressions cannot be used as array indices");
-    }
-    else if (!is_int_expr($3)) {
-        array_index_error = 1;
-        yyerror("Array index must be of integer type");
-    }
-
-    char* var_type = get_var_type($1);
-    printf("DEBUG: Assigning to array '%s' of type '%s'\n", 
-           $1, var_type ? var_type : "unknown");
-    
-    // Debug the expression being assigned
-    debug_node($6, "Expression being assigned");
-
-    if (var_type && strcmp(var_type, "STRING") == 0) {
-        if (strcmp($6->name, "ARRAY_ELEM") == 0) {
-            char* src_array_name = $6->children[0]->name;
-            char* src_array_type = get_var_type(src_array_name);
-            
-            printf("DEBUG: Source array '%s' of type '%s'\n", 
-                   src_array_name, src_array_type ? src_array_type : "unknown");
-            
-            if (src_array_type && strcmp(src_array_type, "INT") == 0) {
-                printf("ERROR: Cannot assign INT array element to STRING array\n");
-                non_string_array_access_error = 1;
-                yyerror("Cannot assign numeric array element to string array");
-            }
-        }
-        else if ($6->child_count == 0 && isdigit($6->name[0])) {
-            non_string_array_access_error = 1;
-            yyerror("Cannot assign numeric value to string array element");
-        }
-    }
-    
-    Node* arr_elem = create_node("ARRAY_ELEM", 2, create_node($1, 0), $3);
-    $$ = create_node("=", 2, arr_elem, $6);
+      check_var_use($1, yylineno);
+      if (is_string_expr($3)) {
+          string_index_error = 1;
+          yyerror("String expressions cannot be used as array indices");
+      } else if (!is_int_expr($3)) {
+          array_index_error = 1;
+          yyerror("Array index must be of integer type");
+      }
+      char* var_type = get_var_type($1);
+      if (var_type && strcmp(var_type, "STRING") == 0) {
+          if (strcmp($6->name, "ARRAY_ELEM") == 0) {
+              char* src_array_name = $6->children[0]->name;
+              char* src_array_type = get_var_type(src_array_name);
+              if (src_array_type && strcmp(src_array_type, "INT") == 0) {
+                  non_string_array_access_error = 1;
+                  yyerror("Cannot assign numeric array element to string array");
+              }
+          } else if ($6->child_count == 0 && isdigit($6->name[0])) {
+              non_string_array_access_error = 1;
+              yyerror("Cannot assign numeric value to string array element");
+          }
+      }
+      Node* arr_elem = create_node("ARRAY_ELEM", 2, create_node($1, 0), $3);
+      $$ = create_node("=", 2, arr_elem, $6);
   }
   | MUL IDENTIFIER ASSIGN expr ';' {
-    check_var_use($2, yylineno);
-    
-    // Get variable type
-    char* var_type = get_var_type($2);
-    
-    // Check if it's a pointer type
-    if (var_type) {
-        if (strcmp(var_type, "INT_PTR") != 0 && 
-            strcmp(var_type, "REAL_PTR") != 0 && 
-            strcmp(var_type, "CHAR_PTR") != 0) {
-            // Error: Can't dereference non-pointer
-            dereference_type_error = 1;
-            sprintf(yytext, "%s", $2);
-            yyerror("Cannot dereference non-pointer variable");
-        }
-    }
-    
-    $$ = create_node("= *", 2, create_node($2, 0), $4);
+      check_var_use($2, yylineno);
+      char* var_type = get_var_type($2);
+      if (var_type && strcmp(var_type, "INT_PTR") != 0 && strcmp(var_type, "REAL_PTR") != 0 && strcmp(var_type, "CHAR_PTR") != 0) {
+          dereference_type_error = 1;
+          sprintf(yytext, "%s", $2);
+          yyerror("Cannot dereference non-pointer variable");
+      }
+      $$ = create_node("= *", 2, create_node($2, 0), $4);
   }
   | IF expr ':' body ELSE ':' body {
       if (!is_bool_expr($2)) {
@@ -1188,8 +1154,7 @@ stmt
       array_pointer_arithmetic_error = 1;
       yyerror("Cannot add anything to array elements - they are not pointers");
       $$ = create_node("ERROR", 0);
-  }
-;
+  };
 
 var_decls
   : VAR optional_var_list { $$ = $2; }

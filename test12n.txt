@@ -1,9 +1,0 @@
-def test_array_index(): 
-  var
-    type int: arr[10];
-    type string: str[10]: "hello";
-    type real: r;
-  begin
-    r = 3.14;
-    arr[r] = 5;  # This should trigger array_index_error since r is not an integer
-  end

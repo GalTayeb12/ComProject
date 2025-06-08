@@ -118,8 +118,8 @@ Starting parsing...
           (BLOCK
             (BODY
               (BLOCK
-                (CHAR x)
-                (BOOL k)
+                (CHAR x1)
+                (BOOL k1)
               )
               (BLOCK
                 (= k
@@ -133,9 +133,6 @@ Starting parsing...
                   )
                 )
               )
-            )
-            (= n
-              (False)
             )
             (= x1
               (k)
