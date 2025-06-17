@@ -1,21 +1,27 @@
-def A1(par1 real: c): returns int
+def A1(par1 real:c): returns int
 var
 	type int: x1:25, x2;
 begin
-	if x1 ! = 25 or c == 2.89:
-		x2 = x1 – 5;
+	if x1 != 25 or c == 2.89:
+	begin
+		x2 = x1 - 5;
+	end
 	else:
+	begin
 		x2 = x1 + 5;
+	end
 	return x1 * x2;
 end
 
-def_main_ ():
+def _main_():
 var
-	type int:a:5,aa;
+	type int: a, aa;
 begin
+	a = 5;
+	aa = 0;
 	while a < 100:
 	begin
-		aa=call A1(8.12);
+		aa = call A1(8.12);
 		a = aa + a;
 	end
 end

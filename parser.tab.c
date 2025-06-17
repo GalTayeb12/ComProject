@@ -102,7 +102,6 @@ char current_return_type[20] = "";
 char return_type_to_push[20] = "";
 int current_func_has_return = 0;
 
-// דגלים חכמים
 int param_error = 0;
 int comma_error = 0;
 int return_type_error = 0;
@@ -152,7 +151,7 @@ void add_function(char* name, int param_count, Node* params, char* ret_type) {
         if (ret_type && strlen(ret_type) > 0) {
             function_table[function_count].return_type = strdup(ret_type);
         } else {
-            function_table[function_count].return_type = NULL; // Procedure
+            function_table[function_count].return_type = NULL; 
         }
         
         // Allocate and store parameter types (existing code)
@@ -187,31 +186,25 @@ int is_procedure(const char* func_name) {
                     strlen(function_table[i].return_type) == 0);
         }
     }
-    return 1; // If function not found, assume it's a procedure to be safe
+    return 1; 
 }
 
 void check_param_types(const char* func_name, Node* args_node, int line) {
     int func_index = is_function_defined(func_name);
-    if (func_index <= 0) return;  // Function not found (should be caught elsewhere)
+    if (func_index <= 0) return;  
     
-    func_index--; // Convert to 0-based index
+    func_index--; 
     FunctionInfo* func = &function_table[func_index];
     
-    // If no parameters, nothing to check
     if (func->param_count == 0) return;
     
-    // If ARGS NONE, no arguments provided
     if (strcmp(args_node->name, "ARGS NONE") == 0) return;
     
-    // Check each argument against the parameter type
     for (int i = 0; i < func->param_count && i < args_node->child_count; i++) {
-        // Get the argument node
         Node* arg = args_node->children[i];
-        
-        // Determine the argument type
+
         char* arg_type = NULL;
-        
-        // If it's a literal, determine type from the literal
+
         if (arg->child_count == 0) {
             if (isdigit(arg->name[0]) || (arg->name[0] == '-' && isdigit(arg->name[1]))) {
                 if (strchr(arg->name, '.'))
@@ -226,31 +219,25 @@ void check_param_types(const char* func_name, Node* args_node, int line) {
             else if (strcmp(arg->name, "TRUE") == 0 || strcmp(arg->name, "FALSE") == 0)
                 arg_type = "BOOL";
             else if (strcmp(arg->name, "NULL") == 0)
-                arg_type = "NULL";  // Will need special handling
+                arg_type = "NULL";  
             else {
-                // If it's an identifier, try to look up its type
                 arg_type = get_var_type(arg->name);
                 if (arg_type == NULL) {
-                    // If we can't determine the type, just continue - other error handling will catch this
                     continue;
                 }
             }
         }
         
-        // Debug output to see what's being detected
         if (debug_mode) {
             printf("DEBUG: Argument %d of function '%s' - detected type: '%s', expected type: '%s'\n", 
                    i+1, func_name, arg_type ? arg_type : "unknown", func->param_types[i]);
         }
         
-        // For now, basic check for literals
         if (arg_type != NULL && strcasecmp(arg_type, func->param_types[i]) != 0) {
-            // Special case for NULL with pointer types
             if (strcmp(arg_type, "NULL") == 0 && strstr(func->param_types[i], "_PTR") != NULL) {
-                continue;  // NULL is compatible with pointer types
+                continue;  
             }
             
-            // Add more debug info
             if (debug_mode) {
                 printf("DEBUG: Type mismatch for parameter %d of function '%s'\n", i+1, func_name);
                 printf("       Expected: '%s', Got: '%s'\n", func->param_types[i], arg_type);
@@ -259,79 +246,62 @@ void check_param_types(const char* func_name, Node* args_node, int line) {
             param_type_mismatch = 1;
             sprintf(yytext, "%s", func_name);
             yylineno = line;
-            // Make error message more specific
             char error_msg[256];
             sprintf(error_msg, "Parameter type mismatch in function '%s': expected '%s' for parameter %d, got '%s'", 
                     func_name, func->param_types[i], i+1, arg_type);
             yyerror(error_msg);
-            return;  // Exit after first error to avoid multiple errors
+            return;  
         }
     }
 }
 
-// Check if function exists - return index+1 (0 if not found)
 int is_function_defined(const char* name) {
     for (int i = 0; i < function_count; i++) {
         if (strcmp(function_table[i].name, name) == 0)
-            return i + 1;  // Return position + 1 (0 means not found)
+            return i + 1; 
     }
-    return 0;  // Not found
+    return 0;  
 }
 
-// Get function's parameter count
 int get_function_param_count(const char* name) {
     int index = is_function_defined(name);
     if (index > 0)
         return function_table[index-1].param_count;
-    return -1;  // Function not found
+    return -1;  
 }
 
-// Check parameter count
 void check_param_count(const char* func_name, int provided_count, int line) {
     int required_count = get_function_param_count(func_name);
     if (required_count >= 0 && required_count != provided_count) {
         param_count_mismatch = 1;
-        sprintf(yytext, "%s", func_name);  // Store function name for error
+        sprintf(yytext, "%s", func_name);  
         yylineno = line;
         yyerror("Parameter count mismatch");
     }
 }
 
-// Check if variable exists in current scope (including function parameters)
-// Check if variable exists in current scope
 int is_var_defined(const char* name) {
-    // More detailed debugging
-    // printf("Checking if '%s' is defined (var_count = %d)\n", name, var_count);
-    
-    // First check if it's a function name
     if (is_function_defined(name) != 0) {
-        // printf("'%s' is a function\n", name);
-        return 1;  // Consider function names as "defined"
+        return 1;  
     }
     
-    // Then check variable names
     for (int i = 0; i < var_count; i++) {
         if (var_names[i] && strcmp(var_names[i], name) == 0) {
-            // printf("'%s' is a defined variable\n", name);
             return 1;
         }
     }
     
-    // Special case for function parameters being used in the function body
     if (function_count > 0) {
         FunctionInfo* last_func = &function_table[function_count-1];
         if (last_func->param_count > 0) {
-            // Manually check if name matches any parameter by parsing parameter strings
             for (int i = 0; i < var_count; i++) {
                 if (var_names[i] && strcmp(var_names[i], name) == 0) {
-                    // printf("'%s' is a parameter of the current function\n", name);
                     return 1;
                 }
             }
         }
     }
     
-    // printf("'%s' is NOT defined\n", name);
     return 0;
 }
 /*
@@ -353,7 +323,6 @@ int check_param_order(const char* param_name, int expected_index) {
     return 1;
 }*/
 
-// Add variable to current scope
 void add_var(char* name, char* type) {
     if (is_var_defined(name)) {
         duplicate_var_error = 1;
@@ -389,14 +358,13 @@ void clear_vars() {
 
 int check_function_call(const char* name, int line) {
     if (is_function_defined(name) == 0) {
-        return 0;  // Function not found
+        return 0;  
     }
-    return 1;  // Function found
+    return 1;  
 }
 void check_var_use(const char* name, int line) {
-    // Skip check if this is a predefined identifier or in debug mode
     if (strcmp(name, "_main_") == 0 || is_function_defined(name) != 0 || debug_mode) {
-        return;  // Skip the check in debug mode
+        return;  
     }
     
     if (!is_var_defined(name)) {
@@ -410,18 +378,15 @@ void check_var_use(const char* name, int line) {
 int is_bool_expr(Node* expr) {
     if (!expr) return 0;
     
-    // Direct boolean literals
     if (strcmp(expr->name, "TRUE") == 0 || strcmp(expr->name, "FALSE") == 0)
         return 1;
     
-    // Variable of type BOOL
     if (expr->child_count == 0) {
         char* var_type = get_var_type(expr->name);
         if (var_type && strcmp(var_type, "BOOL") == 0)
             return 1;
     }
     
-    // Boolean operations
     if (strcmp(expr->name, "AND") == 0 || strcmp(expr->name, "OR") == 0 ||
         strcmp(expr->name, "NOT") == 0 || strcmp(expr->name, "BITWISE_NOT") == 0 ||
         strcmp(expr->name, "BITWISE_OR") == 0 ||
@@ -438,22 +403,17 @@ int is_bool_expr(Node* expr) {
 int is_int_expr(Node* expr) {
     if (!expr) return 0;
     
-    // Direct integer literals
     if (expr->child_count == 0) {
-        // If it's a numeric literal without decimal point
         if (isdigit(expr->name[0]) && !strchr(expr->name, '.'))
             return 1;
         
-        // Check if it's a variable identifier of type INT
         char* var_type = get_var_type(expr->name);
         if (var_type && strcmp(var_type, "INT") == 0)
             return 1;
     }
     
-    // Arithmetic operations are integer expressions if operands are integers
     if (strcmp(expr->name, "+") == 0 || strcmp(expr->name, "-") == 0 ||
         strcmp(expr->name, "*") == 0 || strcmp(expr->name, "/") == 0) {
-        // For simplicity, we'll just return 1 for arithmetic operations
         return 1;
     }
     
@@ -463,30 +423,24 @@ int is_int_expr(Node* expr) {
 int is_string_expr(Node* expr) {
     if (!expr) return 0;
     
-    // Direct string literals
     if (expr->child_count == 0 && expr->name[0] == '"')
         return 1;
     
-    // For this basic check, we'll assume other expressions are not strings
     return 0;
 }
 
 char* extract_param_name(const char* param_str) {
-    // Assuming format: "parSOMETHING TYPE NAME"
     char* last_space = strrchr(param_str, ' ');
     if (last_space) {
-        return last_space + 1;  // Return pointer to the name
+        return last_space + 1;  
     }
-    return NULL;  // Error case
+    return NULL; 
 }
 
-// Add this function near other is_xxx_defined functions
 int is_parameter(const char* name) {
-    // Look through the most recently defined function
     if (function_count > 0) {
         FunctionInfo* current_func = &function_table[function_count-1];
         
-        // If the function has parameters, check if 'name' is one of them
         if (current_func->param_count > 0 && current_func->param_types != NULL) {
             for (int i = 0; i < var_count; i++) {
                 if (strcmp(var_names[i], name) == 0)
@@ -506,7 +460,6 @@ char* get_var_type(const char* name) {
     return NULL;
 }
 
-// Debug function - enable when needed
 void debug_print_vars(const char* location) {
     printf("=== Variables at %s ===\n", location);
     for (int i = 0; i < var_count; i++) {
@@ -533,7 +486,7 @@ void debug_print_all_vars() {
                i, var_info[i].name, var_info[i].type);
     }
 }
-// מחסנית טיפוסי חזרה
+
 void push_return_type(const char* type) {
     if (++stack_top < MAX_DEPTH) {
         strcpy(return_type_stack[stack_top], type);
@@ -551,7 +504,6 @@ void pop_return_type() {
     }
 }
 
-// Add this to your C code section at the top
 char* get_expr_type(Node* expr) {
     if (!expr) return NULL;
     
@@ -581,16 +533,12 @@ char* get_expr_type(Node* expr) {
         return get_var_type(expr->name);
     }
     
-    // Check operation type
     if (strcmp(expr->name, "*") == 0) {
-        // Check if it's unary dereference or binary multiplication based on child count
         if (expr->child_count == 1) {
-            // Unary dereference
             char* operand_type = get_expr_type(expr->children[0]);
             
             if (!operand_type) return NULL;
             
-            // Operand must be a pointer type
             if (strcmp(operand_type, "INT_PTR") == 0)
                 return "INT";
             else if (strcmp(operand_type, "REAL_PTR") == 0)
@@ -603,20 +551,17 @@ char* get_expr_type(Node* expr) {
             }
         }
         else if (expr->child_count == 2) {
-            // Binary multiplication
             char* left_type = get_expr_type(expr->children[0]);
             char* right_type = get_expr_type(expr->children[1]);
             
             if (!left_type || !right_type) return NULL;
             
-            // Check if operands are numeric
             if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
                 (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
                 printf("Type error at line %d: Arithmetic operators require numeric operands\n", yylineno);
                 return NULL;
             }
             
-            // If either is REAL, result is REAL
             if (strcmp(left_type, "REAL") == 0 || strcmp(right_type, "REAL") == 0)
                 return "REAL";
             else
@@ -639,7 +584,6 @@ char* get_expr_type(Node* expr) {
             return NULL;
         }
         
-        // If either is REAL, result is REAL
         if (strcmp(left_type, "REAL") == 0 || strcmp(right_type, "REAL") == 0)
             return "REAL";
         else
@@ -743,15 +687,13 @@ char* get_expr_type(Node* expr) {
         return "INT";
     }
     
-    // Function calls - would need to look up the function's return type
     if (strcmp(expr->name, "CALL") == 0) {
-        // For this simple version, we'll just return a valid type
-        return "INT"; // Or implement proper function return type lookup
+        return "INT"; 
     }
     
-    return NULL; // Unknown expression type
+    return NULL; 
 }
-// בדיקת התאמת סוג RETURN
+
 int check_return_type(Node* expr_node) {
     if (!expr_node) return 1;
 
@@ -760,11 +702,11 @@ int check_return_type(Node* expr_node) {
         return 0;
     }
 
-    // קריאה לפונקציה תמיד חוקי
+
     if (strcmp(expr_node->name, "CALL") == 0)
         return 1;
 
-    // משתנה
+
     if (expr_node->child_count == 0 && !isdigit(expr_node->name[0]) &&
         expr_node->name[0] != '\'' && expr_node->name[0] != '"' &&
         strcmp(expr_node->name, "TRUE") != 0 &&
@@ -794,7 +736,7 @@ int check_return_type(Node* expr_node) {
         strcmp(current_return_type, "CHAR_PTR") == 0))
         return 1;
 
-    // אופרטורים בסיסיים
+
     if (strcmp(expr_node->name, "+") == 0 || strcmp(expr_node->name, "-") == 0 ||
         strcmp(expr_node->name, "*") == 0 || strcmp(expr_node->name, "/") == 0)
         return 1;
@@ -803,7 +745,7 @@ int check_return_type(Node* expr_node) {
     return 0;
 }
 
-// בדיקה אם פונקציה מסתיימת ב-RETURN
+
 int ends_with_return(Node* node) {
     if (!node) return 0;
     if (strcmp(node->name, "BLOCK") == 0 || strcmp(node->name, "BODY") == 0) {
@@ -817,7 +759,7 @@ int ends_with_return(Node* node) {
     return 0;
 }
 
-#line 821 "parser.tab.c"
+#line 763 "parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -1262,16 +1204,16 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  7
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   1200
+#define YYLAST   1206
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS  62
 /* YYNNTS -- Number of nonterminals.  */
 #define YYNNTS  25
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  121
+#define YYNRULES  122
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  280
+#define YYNSTATES  283
 
 /* YYMAXUTOK -- Last valid token kind.  */
 #define YYMAXUTOK   309
@@ -1325,19 +1267,19 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   790,   790,   794,   795,   796,   800,   812,   824,   853,
-     895,   922,   931,   937,   943,   951,   952,   953,   954,   955,
-     956,   957,   958,   967,   968,   969,   970,   971,   972,   973,
-     974,   978,   979,   984,   985,   989,  1000,  1011,  1012,  1013,
-    1017,  1018,  1032,  1039,  1045,  1049,  1083,  1114,  1159,  1179,
-    1186,  1193,  1200,  1207,  1214,  1221,  1229,  1232,  1235,  1238,
-    1244,  1254,  1255,  1259,  1260,  1264,  1271,  1275,  1292,  1316,
-    1325,  1329,  1336,  1364,  1367,  1388,  1396,  1413,  1420,  1426,
-    1432,  1442,  1460,  1478,  1496,  1514,  1533,  1552,  1570,  1588,
-    1606,  1625,  1639,  1653,  1667,  1681,  1694,  1710,  1711,  1712,
-    1733,  1740,  1746,  1768,  1783,  1788,  1804,  1808,  1839,  1866,
-    1870,  1871,  1872,  1873,  1874,  1875,  1876,  1877,  1889,  1898,
-    1899,  1910
+       0,   731,   731,   735,   736,   737,   741,   753,   765,   793,
+     832,   858,   866,   872,   877,   885,   886,   887,   888,   889,
+     890,   891,   892,   901,   902,   903,   904,   905,   906,   907,
+     908,   912,   913,   918,   919,   923,   934,   945,   946,   947,
+     951,   952,   966,   973,   979,   983,  1014,  1041,  1081,  1098,
+    1105,  1112,  1119,  1126,  1133,  1140,  1148,  1151,  1154,  1157,
+    1163,  1172,  1173,  1177,  1178,  1182,  1189,  1193,  1209,  1232,
+    1241,  1245,  1252,  1270,  1296,  1299,  1319,  1327,  1343,  1350,
+    1356,  1362,  1371,  1389,  1406,  1422,  1438,  1455,  1472,  1488,
+    1504,  1520,  1537,  1550,  1563,  1576,  1589,  1601,  1616,  1617,
+    1618,  1636,  1643,  1649,  1669,  1681,  1685,  1699,  1703,  1730,
+    1753,  1757,  1758,  1759,  1760,  1761,  1762,  1763,  1764,  1775,
+    1783,  1784,  1795
 };
 #endif
 
@@ -1390,33 +1332,34 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 static const yytype_int16 yypact[] =
 {
        8,   -32,    33,  -120,     8,    35,     0,  -120,  -120,    26,
-      54,    30,   155,  -120,    26,  -120,    11,  -120,    38,    40,
-      52,  -120,  -120,  -120,    57,  -120,  -120,  -120,  -120,    78,
-    -120,   180,   247,   247,    62,    79,    26,  -120,    82,    97,
-     -30,   101,   128,    35,  -120,   133,   128,   150,  -120,   104,
-      95,    96,    30,   112,   113,  -120,  -120,  -120,   247,   247,
-     -13,   -11,   119,    -2,  -120,  -120,  -120,  -120,   247,   267,
-    -120,   580,   860,   887,   247,    91,   150,   111,   130,   227,
-     247,    70,  -120,    54,  -120,  -120,  -120,  -120,   124,   166,
-    -120,   -49,   114,    -7,   126,    15,  -120,  -120,  -120,  -120,
-     247,   127,   247,   143,   247,   247,  -120,   -20,   941,   247,
-     247,   247,   247,   247,   247,   247,   247,   247,   247,   247,
-     247,   247,   247,  -120,    91,    91,   608,    26,  -120,   162,
-    -120,  -120,   247,   247,   144,   636,   340,   247,   247,  -120,
-    -120,   314,   247,  -120,   146,  -120,   247,   142,   148,  -120,
-    -120,   149,   967,   247,   993,  -120,   292,   145,   370,   247,
-     247,   247,  -120,   215,  1149,    85,    85,    60,    60,    60,
-      60,    72,    72,  -120,  -120,  1149,   215,   137,  -120,   247,
-      54,   247,   147,   664,   152,  -120,   163,  1019,  1045,  -120,
-    -120,  -120,  -120,  -120,  -120,  -120,  -120,  -120,   316,   141,
-     692,   153,   154,  -120,   164,  -120,  -120,   400,  -120,   247,
-    -120,  -120,  1071,  1097,   -10,   151,   247,   720,  -120,   748,
-     156,  -120,   247,   247,   171,   172,   157,  -120,  -120,   176,
-    -120,  -120,   175,   177,   178,    91,   914,   247,  -120,  -120,
-     165,   776,   247,   247,   182,  -120,   160,   247,   247,   247,
-    -120,    91,  1123,   194,  -120,   430,   460,  -120,   490,   520,
-     550,   197,   201,  -120,   222,   223,  -120,  -120,  -120,   204,
-      91,   247,   247,    91,  -120,   804,   832,  -120,  -120,  -120
+      54,    30,   317,  -120,    26,  -120,    11,  -120,    38,    40,
+      52,  -120,  -120,  -120,    57,  -120,  -120,  -120,  -120,    59,
+    -120,   184,   250,   250,    78,    79,    26,  -120,    82,    94,
+     -30,    95,   132,    35,  -120,   135,   132,   150,  -120,   101,
+      96,   107,    30,   106,   113,  -120,  -120,  -120,   250,   250,
+     -13,   -11,   121,    -2,  -120,  -120,  -120,  -120,   250,   270,
+    -120,   614,   866,   893,   250,    91,   150,    97,   130,   230,
+     250,    70,  -120,    54,  -120,  -120,  -120,  -120,   123,   165,
+    -120,   -49,   112,    -7,   115,    15,  -120,  -120,  -120,  -120,
+     250,   116,   250,   127,   250,   250,  -120,   -20,   947,   250,
+     250,   250,   250,   250,   250,   250,   250,   250,   250,   250,
+     250,   250,   250,  -120,    91,    91,   642,    26,  -120,   167,
+    -120,  -120,   250,   250,   133,   670,   374,   250,   250,  -120,
+    -120,   348,   250,  -120,   134,  -120,   250,   136,   138,  -120,
+    -120,   139,   973,   250,   999,  -120,   326,   125,   404,   250,
+     250,   250,  -120,   218,  1155,    85,    85,    60,    60,    60,
+      60,    72,    72,  -120,  -120,  1155,   218,   124,  -120,   250,
+      54,   250,   137,   698,   131,  -120,   143,  1025,  1051,  -120,
+    -120,  -120,  -120,  -120,  -120,  -120,  -120,  -120,   350,   140,
+     295,   128,   142,  -120,   145,  -120,  -120,   434,  -120,   250,
+    -120,  -120,  1077,  1103,   -10,   149,   250,   726,  -120,   754,
+     141,  -120,   250,   250,   151,   152,   144,  -120,  -120,   146,
+     158,  -120,  -120,   157,   162,   163,    91,   920,   250,  -120,
+    -120,   153,   782,   250,   250,   160,  -120,   169,   147,   250,
+     250,   250,  -120,    91,  1129,   176,  -120,   464,   494,  -120,
+    -120,   524,   554,   584,   187,   168,  -120,   171,   198,  -120,
+    -120,  -120,   180,    91,   250,   250,    91,  -120,   810,   838,
+    -120,  -120,  -120
 };
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -1429,37 +1372,38 @@ static const yytype_int8 yydefact[] =
       11,    23,    24,    25,     0,    27,    28,    29,    30,     0,
       65,     0,     0,     0,     0,     0,    64,    32,     0,     0,
        0,     0,    37,    62,    57,     0,    38,    40,    26,     0,
-       0,     0,    12,     0,     0,   116,   114,   115,     0,     0,
-       0,     0,     0,   106,   110,   111,   112,   113,     0,     0,
+       0,     0,    12,     0,     0,   117,   115,   116,     0,     0,
+       0,     0,     0,   107,   111,   112,   113,   114,     0,     0,
       43,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,    35,     0,    31,    36,    41,    14,     0,     9,
-      10,     0,     0,    73,     0,     0,    78,    95,    98,    99,
-       0,   102,     0,     0,   121,     0,    96,   106,     0,     0,
+      10,     0,     0,    74,     0,     0,    79,    96,    99,   100,
+       0,   103,     0,     0,   122,     0,    97,   107,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
        0,     0,     0,    42,     0,     0,     0,    64,    34,     0,
-      56,    58,   121,     0,     0,     0,     0,     0,     0,     7,
+      56,    58,   122,     0,     0,     0,     0,     0,     0,     7,
       13,     0,     0,    71,     0,    70,     0,     0,     0,    68,
-      72,     0,     0,     0,     0,   117,   119,     0,     0,     0,
-       0,     0,    97,    91,    93,    85,    86,    90,    88,    89,
-      87,    81,    82,    83,    84,    94,    92,    52,    53,     0,
+      73,     0,     0,     0,     0,   118,   120,     0,     0,     0,
+       0,     0,    98,    92,    94,    86,    87,    91,    89,    90,
+      88,    82,    83,    84,    85,    95,    93,    52,    53,     0,
        0,     0,     0,     0,     0,    44,     0,     0,     0,    15,
-      16,    17,    18,    22,    19,    20,    21,     8,    75,     0,
-       0,     0,    73,    74,     0,    77,   105,     0,   104,   121,
-     107,   108,     0,     0,    81,     0,     0,     0,    33,     0,
-       0,    48,   121,     0,     0,     0,     0,    67,    69,    79,
-     103,   120,     0,     0,     0,     0,     0,     0,    54,    46,
-       0,     0,     0,     0,     0,    76,     0,     0,     0,     0,
-      49,     0,     0,     0,    47,     0,     0,    80,     0,     0,
-       0,    51,     0,    45,     0,     0,   100,   101,   118,     0,
-       0,     0,     0,     0,    55,     0,     0,    50,    59,    60
+      16,    17,    18,    22,    19,    20,    21,     8,    76,     0,
+       0,     0,    74,    75,     0,    78,   106,     0,   105,   122,
+     108,   109,     0,     0,    82,     0,     0,     0,    33,     0,
+       0,    48,   122,     0,     0,     0,     0,    67,    69,     0,
+      80,   104,   121,     0,     0,     0,     0,     0,     0,    54,
+      46,     0,     0,     0,     0,     0,    77,     0,     0,     0,
+       0,     0,    49,     0,     0,     0,    47,     0,     0,    72,
+      81,     0,     0,     0,    51,     0,    45,     0,     0,   101,
+     102,   119,     0,     0,     0,     0,     0,    55,     0,     0,
+      50,    59,    60
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int16 yypgoto[] =
 {
-    -120,  -120,   258,  -120,  -120,    68,   216,  -120,  -120,   252,
-      -6,  -119,    51,   231,   205,   237,   -33,  -120,   274,   169,
-      64,  -120,   159,   -31,  -117
+    -120,  -120,   193,  -120,  -120,    68,   186,  -120,  -120,   222,
+      -6,  -119,    51,   194,   179,   219,   -33,  -120,   247,   117,
+      37,  -120,   120,   -31,  -117
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
@@ -1479,123 +1423,123 @@ static const yytype_int16 yytable[] =
       44,     1,   144,     6,     1,   182,    31,    32,   159,   160,
       33,    34,    35,    36,    16,    37,    38,    97,    98,    80,
      119,   120,    99,     7,   101,   104,    44,   106,   108,   105,
-      44,    44,   100,   126,   102,    12,   234,     9,   135,   136,
+      44,    44,   100,   126,   102,    12,   235,     9,   135,   136,
      146,    39,   147,   104,   148,    11,    40,   105,    21,    22,
       23,    48,    25,    26,    27,    28,    41,    16,     5,   152,
      130,   154,     5,   150,   158,    18,   151,   139,   163,   164,
      165,   166,   167,   168,   169,   170,   171,   172,   173,   174,
-     175,   176,   231,    82,   180,    49,    51,    85,   117,   118,
-     119,   120,   183,   127,    16,   240,   187,   188,   137,   138,
-      52,   198,   119,   120,    53,   200,   250,    74,   113,   114,
+     175,   176,   232,    82,   180,    49,    51,    85,   117,   118,
+     119,   120,   183,   127,    16,   241,   187,   188,   137,   138,
+      52,   198,   119,   120,    53,   200,    54,   252,   113,   114,
      115,   116,   207,   117,   118,   119,   120,    77,   212,   213,
-     214,     1,   261,    31,    32,    54,    75,    33,    34,    35,
-      36,    16,    78,    38,   215,   216,    81,    84,   217,    87,
-     219,   274,    88,    89,   277,    31,    32,    91,    93,    33,
-      34,    35,    36,    16,   103,    38,   132,   133,    39,   140,
-     141,   181,   145,    40,   218,    21,    22,    23,    24,    25,
-      26,    27,    28,    41,   149,   236,   153,   155,   201,   184,
-      39,   199,   241,   202,   204,    40,    55,    56,    57,   227,
-     223,   210,   244,   220,   269,    41,   252,   222,   235,   257,
-      58,   255,   256,   229,   239,   148,   258,   259,   260,    59,
-      60,   253,    61,   147,    62,    63,    64,    65,    66,    67,
-     242,   243,    68,   246,   247,    69,   248,   249,    70,   142,
-     275,   276,   134,    55,    56,    57,   111,   112,   113,   114,
-     115,   116,   263,   117,   118,   119,   120,    58,   270,   271,
-     272,   273,     8,    55,    56,    57,    59,    60,    90,    61,
-      50,    62,    63,    64,    65,    66,    67,    58,    86,    68,
-      83,   131,    69,    55,    56,    57,    59,    60,    30,    61,
-     245,    62,    63,    64,    65,    66,    67,    58,     0,    68,
-       0,     0,    69,     0,     0,     0,    59,    60,     0,    61,
-     205,    62,   107,    64,    65,    66,    67,   203,     0,    68,
-     109,   110,    69,   111,   112,   113,   114,   115,   116,     0,
-     117,   118,   119,   120,   189,   190,   191,   192,   193,   194,
-     195,   196,   121,   122,   109,   110,     0,   111,   112,   113,
-     114,   115,   116,   209,   117,   118,   119,   120,     0,     0,
-       0,     0,     0,     0,     0,     0,   121,   122,   109,   110,
-       0,   111,   112,   113,   114,   115,   116,   226,   117,   118,
+     214,   215,   216,    74,   264,     1,    75,    31,    32,    78,
+      81,    33,    34,    35,    36,    16,    87,    38,   217,    84,
+     219,    91,   132,    88,   277,    31,    32,   280,    93,    33,
+      34,    35,    36,    16,    89,    38,   103,   133,   140,   141,
+     145,   155,    39,   149,   218,   153,   181,    40,   184,   199,
+     223,   210,   201,   202,   204,   237,   222,    41,   230,   245,
+      39,   247,   242,   220,   272,    40,   260,     8,   227,   240,
+      55,    56,    57,   148,   147,    41,   236,   254,   274,   255,
+     243,   244,   257,   258,    58,   248,   249,   142,   261,   262,
+     263,   250,   251,    59,    60,   273,    61,   259,    62,    63,
+      64,    65,    66,    67,   266,   275,    68,   276,    90,    69,
+      50,    86,    70,   278,   279,   134,    55,    56,    57,   111,
+     112,   113,   114,   115,   116,   131,   117,   118,   119,   120,
+      58,    30,    83,   246,     0,   203,    55,    56,    57,    59,
+      60,   205,    61,     0,    62,    63,    64,    65,    66,    67,
+      58,     0,    68,     0,     0,    69,    55,    56,    57,    59,
+      60,     0,    61,     0,    62,    63,    64,    65,    66,    67,
+      58,     0,    68,     0,     0,    69,     0,     0,     0,    59,
+      60,     0,    61,     0,    62,   107,    64,    65,    66,    67,
+       0,     0,    68,   109,   110,    69,   111,   112,   113,   114,
+     115,   116,     0,   117,   118,   119,   120,    21,    22,    23,
+      24,    25,    26,    27,    28,   121,   122,     0,     0,     0,
+       0,     0,     0,   228,   109,   110,   229,   111,   112,   113,
+     114,   115,   116,     0,   117,   118,   119,   120,   189,   190,
+     191,   192,   193,   194,   195,   196,   121,   122,   109,   110,
+       0,   111,   112,   113,   114,   115,   116,   209,   117,   118,
      119,   120,     0,     0,     0,     0,     0,     0,     0,     0,
-     121,   122,     0,     0,     0,     0,     0,     0,   109,   110,
-     186,   111,   112,   113,   114,   115,   116,     0,   117,   118,
-     119,   120,     0,     0,     0,     0,     0,     0,     0,     0,
-     121,   122,     0,     0,     0,     0,     0,     0,   109,   110,
-     211,   111,   112,   113,   114,   115,   116,     0,   117,   118,
-     119,   120,     0,     0,     0,     0,     0,     0,     0,     0,
-     121,   122,     0,     0,     0,     0,     0,     0,   109,   110,
-     230,   111,   112,   113,   114,   115,   116,     0,   117,   118,
-     119,   120,     0,     0,     0,     0,     0,     0,     0,     0,
-     121,   122,     0,     0,     0,     0,     0,     0,   109,   110,
-     264,   111,   112,   113,   114,   115,   116,     0,   117,   118,
-     119,   120,     0,     0,     0,     0,     0,     0,     0,     0,
-     121,   122,     0,     0,     0,     0,     0,     0,   109,   110,
-     265,   111,   112,   113,   114,   115,   116,     0,   117,   118,
-     119,   120,     0,     0,     0,     0,     0,     0,     0,     0,
-     121,   122,     0,     0,     0,     0,     0,     0,   109,   110,
-     266,   111,   112,   113,   114,   115,   116,     0,   117,   118,
-     119,   120,     0,     0,     0,     0,     0,     0,     0,     0,
-     121,   122,     0,     0,     0,     0,     0,     0,   109,   110,
-     267,   111,   112,   113,   114,   115,   116,     0,   117,   118,
-     119,   120,     0,     0,     0,     0,     0,     0,     0,     0,
-     121,   122,     0,     0,     0,     0,     0,     0,   109,   110,
-     268,   111,   112,   113,   114,   115,   116,     0,   117,   118,
-     119,   120,     0,     0,     0,     0,     0,     0,     0,     0,
-     121,   122,     0,     0,     0,     0,   109,   110,   123,   111,
-     112,   113,   114,   115,   116,     0,   117,   118,   119,   120,
-       0,     0,     0,     0,     0,     0,     0,     0,   121,   122,
-       0,     0,     0,     0,   109,   110,   179,   111,   112,   113,
-     114,   115,   116,     0,   117,   118,   119,   120,     0,     0,
-       0,     0,     0,     0,     0,     0,   121,   122,     0,     0,
-       0,     0,   109,   110,   185,   111,   112,   113,   114,   115,
+     121,   122,   109,   110,     0,   111,   112,   113,   114,   115,
+     116,   226,   117,   118,   119,   120,     0,     0,     0,     0,
+       0,     0,     0,     0,   121,   122,     0,     0,     0,     0,
+       0,     0,   109,   110,   186,   111,   112,   113,   114,   115,
      116,     0,   117,   118,   119,   120,     0,     0,     0,     0,
        0,     0,     0,     0,   121,   122,     0,     0,     0,     0,
-     109,   110,   221,   111,   112,   113,   114,   115,   116,     0,
-     117,   118,   119,   120,     0,     0,     0,     0,     0,     0,
-       0,     0,   121,   122,     0,     0,     0,     0,   109,   110,
-     228,   111,   112,   113,   114,   115,   116,     0,   117,   118,
-     119,   120,     0,     0,     0,     0,     0,     0,     0,     0,
-     121,   122,     0,     0,     0,     0,   109,   110,   237,   111,
-     112,   113,   114,   115,   116,     0,   117,   118,   119,   120,
-       0,     0,     0,     0,     0,     0,     0,     0,   121,   122,
-       0,     0,     0,     0,   109,   110,   238,   111,   112,   113,
-     114,   115,   116,     0,   117,   118,   119,   120,     0,     0,
-       0,     0,     0,     0,     0,     0,   121,   122,     0,     0,
-       0,     0,   109,   110,   254,   111,   112,   113,   114,   115,
+       0,     0,   109,   110,   211,   111,   112,   113,   114,   115,
      116,     0,   117,   118,   119,   120,     0,     0,     0,     0,
        0,     0,     0,     0,   121,   122,     0,     0,     0,     0,
-     109,   110,   278,   111,   112,   113,   114,   115,   116,     0,
+       0,     0,   109,   110,   231,   111,   112,   113,   114,   115,
+     116,     0,   117,   118,   119,   120,     0,     0,     0,     0,
+       0,     0,     0,     0,   121,   122,     0,     0,     0,     0,
+       0,     0,   109,   110,   267,   111,   112,   113,   114,   115,
+     116,     0,   117,   118,   119,   120,     0,     0,     0,     0,
+       0,     0,     0,     0,   121,   122,     0,     0,     0,     0,
+       0,     0,   109,   110,   268,   111,   112,   113,   114,   115,
+     116,     0,   117,   118,   119,   120,     0,     0,     0,     0,
+       0,     0,     0,     0,   121,   122,     0,     0,     0,     0,
+       0,     0,   109,   110,   269,   111,   112,   113,   114,   115,
+     116,     0,   117,   118,   119,   120,     0,     0,     0,     0,
+       0,     0,     0,     0,   121,   122,     0,     0,     0,     0,
+       0,     0,   109,   110,   270,   111,   112,   113,   114,   115,
+     116,     0,   117,   118,   119,   120,     0,     0,     0,     0,
+       0,     0,     0,     0,   121,   122,     0,     0,     0,     0,
+       0,     0,   109,   110,   271,   111,   112,   113,   114,   115,
+     116,     0,   117,   118,   119,   120,     0,     0,     0,     0,
+       0,     0,     0,     0,   121,   122,     0,     0,     0,     0,
+     109,   110,   123,   111,   112,   113,   114,   115,   116,     0,
      117,   118,   119,   120,     0,     0,     0,     0,     0,     0,
        0,     0,   121,   122,     0,     0,     0,     0,   109,   110,
-     279,   111,   112,   113,   114,   115,   116,     0,   117,   118,
+     179,   111,   112,   113,   114,   115,   116,     0,   117,   118,
      119,   120,     0,     0,     0,     0,     0,     0,     0,     0,
-     121,   122,     0,     0,     0,   109,   110,   124,   111,   112,
-     113,   114,   115,   116,     0,   117,   118,   119,   120,     0,
-       0,     0,     0,     0,     0,     0,     0,   121,   122,     0,
-       0,     0,   109,   110,   125,   111,   112,   113,   114,   115,
+     121,   122,     0,     0,     0,     0,   109,   110,   185,   111,
+     112,   113,   114,   115,   116,     0,   117,   118,   119,   120,
+       0,     0,     0,     0,     0,     0,     0,     0,   121,   122,
+       0,     0,     0,     0,   109,   110,   221,   111,   112,   113,
+     114,   115,   116,     0,   117,   118,   119,   120,     0,     0,
+       0,     0,     0,     0,     0,     0,   121,   122,     0,     0,
+       0,     0,   109,   110,   238,   111,   112,   113,   114,   115,
      116,     0,   117,   118,   119,   120,     0,     0,     0,     0,
-       0,     0,     0,     0,   121,   122,     0,     0,     0,   109,
-     110,   251,   111,   112,   113,   114,   115,   116,     0,   161,
-     118,   119,   120,     0,     0,     0,     0,     0,     0,     0,
-       0,   121,   122,     0,     0,   109,   110,   162,   111,   112,
-     113,   114,   115,   116,     0,   117,   118,   119,   120,     0,
-       0,     0,     0,     0,     0,     0,     0,   121,   122,     0,
-       0,   109,   110,   206,   111,   112,   113,   114,   115,   116,
+       0,     0,     0,     0,   121,   122,     0,     0,     0,     0,
+     109,   110,   239,   111,   112,   113,   114,   115,   116,     0,
+     117,   118,   119,   120,     0,     0,     0,     0,     0,     0,
+       0,     0,   121,   122,     0,     0,     0,     0,   109,   110,
+     256,   111,   112,   113,   114,   115,   116,     0,   117,   118,
+     119,   120,     0,     0,     0,     0,     0,     0,     0,     0,
+     121,   122,     0,     0,     0,     0,   109,   110,   281,   111,
+     112,   113,   114,   115,   116,     0,   117,   118,   119,   120,
+       0,     0,     0,     0,     0,     0,     0,     0,   121,   122,
+       0,     0,     0,     0,   109,   110,   282,   111,   112,   113,
+     114,   115,   116,     0,   117,   118,   119,   120,     0,     0,
+       0,     0,     0,     0,     0,     0,   121,   122,     0,     0,
+       0,   109,   110,   124,   111,   112,   113,   114,   115,   116,
        0,   117,   118,   119,   120,     0,     0,     0,     0,     0,
-       0,     0,     0,   121,   122,     0,     0,   109,   110,   208,
+       0,     0,     0,   121,   122,     0,     0,     0,   109,   110,
+     125,   111,   112,   113,   114,   115,   116,     0,   117,   118,
+     119,   120,     0,     0,     0,     0,     0,     0,     0,     0,
+     121,   122,     0,     0,     0,   109,   110,   253,   111,   112,
+     113,   114,   115,   116,     0,   161,   118,   119,   120,     0,
+       0,     0,     0,     0,     0,     0,     0,   121,   122,     0,
+       0,   109,   110,   162,   111,   112,   113,   114,   115,   116,
+       0,   117,   118,   119,   120,     0,     0,     0,     0,     0,
+       0,     0,     0,   121,   122,     0,     0,   109,   110,   206,
      111,   112,   113,   114,   115,   116,     0,   117,   118,   119,
      120,     0,     0,     0,     0,     0,     0,     0,     0,   121,
-     122,     0,     0,   109,   110,   224,   111,   112,   113,   114,
+     122,     0,     0,   109,   110,   208,   111,   112,   113,   114,
      115,   116,     0,   117,   118,   119,   120,     0,     0,     0,
        0,     0,     0,     0,     0,   121,   122,     0,     0,   109,
-     110,   225,   111,   112,   113,   114,   115,   116,     0,   117,
+     110,   224,   111,   112,   113,   114,   115,   116,     0,   117,
      118,   119,   120,     0,     0,     0,     0,     0,     0,     0,
-       0,   121,   122,     0,     0,   109,   110,   232,   111,   112,
+       0,   121,   122,     0,     0,   109,   110,   225,   111,   112,
      113,   114,   115,   116,     0,   117,   118,   119,   120,     0,
        0,     0,     0,     0,     0,     0,     0,   121,   122,     0,
        0,   109,   110,   233,   111,   112,   113,   114,   115,   116,
        0,   117,   118,   119,   120,     0,     0,     0,     0,     0,
-       0,     0,     0,   121,   122,     0,     0,   109,     0,   262,
+       0,     0,     0,   121,   122,     0,     0,   109,   110,   234,
      111,   112,   113,   114,   115,   116,     0,   117,   118,   119,
-     120,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-     122
+     120,     0,     0,     0,     0,     0,     0,     0,     0,   121,
+     122,     0,     0,   109,     0,   265,   111,   112,   113,   114,
+     115,   116,     0,   117,   118,   119,   120,     0,     0,     0,
+       0,     0,     0,     0,     0,     0,   122
 };
 
 static const yytype_int16 yycheck[] =
@@ -1611,65 +1555,60 @@ static const yytype_int16 yycheck[] =
      111,   112,   113,   114,   115,   116,   117,   118,   119,   120,
      121,   122,   209,    42,   127,    57,    56,    46,    38,    39,
       40,    41,   133,    12,    13,   222,   137,   138,    38,    39,
-      58,   142,    40,    41,    57,   146,   235,    55,    33,    34,
+      58,   142,    40,    41,    57,   146,    57,   236,    33,    34,
       35,    36,   153,    38,    39,    40,    41,    45,   159,   160,
-     161,     3,   251,     5,     6,    57,    57,     9,    10,    11,
-      12,    13,    45,    15,     7,     8,    45,    14,   179,    45,
-     181,   270,    57,    57,   273,     5,     6,    45,    45,     9,
-      10,    11,    12,    13,    45,    15,    55,    37,    40,    45,
-       4,     9,    58,    45,   180,    20,    21,    22,    23,    24,
-      25,    26,    27,    55,    58,   216,    59,    44,    46,    45,
-      40,    45,   223,    45,    45,    45,    16,    17,    18,    58,
-      37,    56,    45,    56,     7,    55,   237,    55,    57,    49,
-      30,   242,   243,    60,    58,    61,   247,   248,   249,    39,
-      40,    56,    42,    59,    44,    45,    46,    47,    48,    49,
-      59,    59,    52,    57,    59,    55,    59,    59,    58,    57,
-     271,   272,    15,    16,    17,    18,    31,    32,    33,    34,
-      35,    36,    58,    38,    39,    40,    41,    30,    57,    37,
-      37,    57,     4,    16,    17,    18,    39,    40,    52,    42,
-      18,    44,    45,    46,    47,    48,    49,    30,    47,    52,
-      43,    76,    55,    16,    17,    18,    39,    40,    14,    42,
-     226,    44,    45,    46,    47,    48,    49,    30,    -1,    52,
-      -1,    -1,    55,    -1,    -1,    -1,    39,    40,    -1,    42,
-     151,    44,    45,    46,    47,    48,    49,   148,    -1,    52,
-      28,    29,    55,    31,    32,    33,    34,    35,    36,    -1,
-      38,    39,    40,    41,    20,    21,    22,    23,    24,    25,
-      26,    27,    50,    51,    28,    29,    -1,    31,    32,    33,
-      34,    35,    36,    61,    38,    39,    40,    41,    -1,    -1,
-      -1,    -1,    -1,    -1,    -1,    -1,    50,    51,    28,    29,
+     161,     7,     8,    55,   253,     3,    57,     5,     6,    45,
+      45,     9,    10,    11,    12,    13,    45,    15,   179,    14,
+     181,    45,    55,    57,   273,     5,     6,   276,    45,     9,
+      10,    11,    12,    13,    57,    15,    45,    37,    45,     4,
+      58,    44,    40,    58,   180,    59,     9,    45,    45,    45,
+      37,    56,    46,    45,    45,   216,    55,    55,    60,    45,
+      40,    45,   223,    56,     7,    45,    49,     4,    58,    58,
+      16,    17,    18,    61,    59,    55,    57,   238,    37,    56,
+      59,    59,   243,   244,    30,    57,    59,    57,   249,   250,
+     251,    59,    59,    39,    40,    57,    42,    58,    44,    45,
+      46,    47,    48,    49,    58,    37,    52,    57,    52,    55,
+      18,    47,    58,   274,   275,    15,    16,    17,    18,    31,
+      32,    33,    34,    35,    36,    76,    38,    39,    40,    41,
+      30,    14,    43,   226,    -1,   148,    16,    17,    18,    39,
+      40,   151,    42,    -1,    44,    45,    46,    47,    48,    49,
+      30,    -1,    52,    -1,    -1,    55,    16,    17,    18,    39,
+      40,    -1,    42,    -1,    44,    45,    46,    47,    48,    49,
+      30,    -1,    52,    -1,    -1,    55,    -1,    -1,    -1,    39,
+      40,    -1,    42,    -1,    44,    45,    46,    47,    48,    49,
+      -1,    -1,    52,    28,    29,    55,    31,    32,    33,    34,
+      35,    36,    -1,    38,    39,    40,    41,    20,    21,    22,
+      23,    24,    25,    26,    27,    50,    51,    -1,    -1,    -1,
+      -1,    -1,    -1,    58,    28,    29,    61,    31,    32,    33,
+      34,    35,    36,    -1,    38,    39,    40,    41,    20,    21,
+      22,    23,    24,    25,    26,    27,    50,    51,    28,    29,
       -1,    31,    32,    33,    34,    35,    36,    61,    38,    39,
       40,    41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      50,    51,    -1,    -1,    -1,    -1,    -1,    -1,    28,    29,
-      60,    31,    32,    33,    34,    35,    36,    -1,    38,    39,
-      40,    41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      50,    51,    -1,    -1,    -1,    -1,    -1,    -1,    28,    29,
-      60,    31,    32,    33,    34,    35,    36,    -1,    38,    39,
-      40,    41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      50,    51,    -1,    -1,    -1,    -1,    -1,    -1,    28,    29,
-      60,    31,    32,    33,    34,    35,    36,    -1,    38,    39,
-      40,    41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      50,    51,    -1,    -1,    -1,    -1,    -1,    -1,    28,    29,
-      60,    31,    32,    33,    34,    35,    36,    -1,    38,    39,
-      40,    41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      50,    51,    -1,    -1,    -1,    -1,    -1,    -1,    28,    29,
-      60,    31,    32,    33,    34,    35,    36,    -1,    38,    39,
-      40,    41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      50,    51,    -1,    -1,    -1,    -1,    -1,    -1,    28,    29,
-      60,    31,    32,    33,    34,    35,    36,    -1,    38,    39,
-      40,    41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      50,    51,    -1,    -1,    -1,    -1,    -1,    -1,    28,    29,
-      60,    31,    32,    33,    34,    35,    36,    -1,    38,    39,
-      40,    41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      50,    51,    -1,    -1,    -1,    -1,    -1,    -1,    28,    29,
-      60,    31,    32,    33,    34,    35,    36,    -1,    38,    39,
-      40,    41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      50,    51,    -1,    -1,    -1,    -1,    28,    29,    58,    31,
-      32,    33,    34,    35,    36,    -1,    38,    39,    40,    41,
-      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    50,    51,
-      -1,    -1,    -1,    -1,    28,    29,    58,    31,    32,    33,
-      34,    35,    36,    -1,    38,    39,    40,    41,    -1,    -1,
-      -1,    -1,    -1,    -1,    -1,    -1,    50,    51,    -1,    -1,
-      -1,    -1,    28,    29,    58,    31,    32,    33,    34,    35,
+      50,    51,    28,    29,    -1,    31,    32,    33,    34,    35,
+      36,    61,    38,    39,    40,    41,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    50,    51,    -1,    -1,    -1,    -1,
+      -1,    -1,    28,    29,    60,    31,    32,    33,    34,    35,
+      36,    -1,    38,    39,    40,    41,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    50,    51,    -1,    -1,    -1,    -1,
+      -1,    -1,    28,    29,    60,    31,    32,    33,    34,    35,
+      36,    -1,    38,    39,    40,    41,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    50,    51,    -1,    -1,    -1,    -1,
+      -1,    -1,    28,    29,    60,    31,    32,    33,    34,    35,
+      36,    -1,    38,    39,    40,    41,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    50,    51,    -1,    -1,    -1,    -1,
+      -1,    -1,    28,    29,    60,    31,    32,    33,    34,    35,
+      36,    -1,    38,    39,    40,    41,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    50,    51,    -1,    -1,    -1,    -1,
+      -1,    -1,    28,    29,    60,    31,    32,    33,    34,    35,
+      36,    -1,    38,    39,    40,    41,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    50,    51,    -1,    -1,    -1,    -1,
+      -1,    -1,    28,    29,    60,    31,    32,    33,    34,    35,
+      36,    -1,    38,    39,    40,    41,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    50,    51,    -1,    -1,    -1,    -1,
+      -1,    -1,    28,    29,    60,    31,    32,    33,    34,    35,
+      36,    -1,    38,    39,    40,    41,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    50,    51,    -1,    -1,    -1,    -1,
+      -1,    -1,    28,    29,    60,    31,    32,    33,    34,    35,
       36,    -1,    38,    39,    40,    41,    -1,    -1,    -1,    -1,
       -1,    -1,    -1,    -1,    50,    51,    -1,    -1,    -1,    -1,
       28,    29,    58,    31,    32,    33,    34,    35,    36,    -1,
@@ -1690,16 +1629,19 @@ static const yytype_int16 yycheck[] =
       38,    39,    40,    41,    -1,    -1,    -1,    -1,    -1,    -1,
       -1,    -1,    50,    51,    -1,    -1,    -1,    -1,    28,    29,
       58,    31,    32,    33,    34,    35,    36,    -1,    38,    39,
+      40,    41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
+      50,    51,    -1,    -1,    -1,    -1,    28,    29,    58,    31,
+      32,    33,    34,    35,    36,    -1,    38,    39,    40,    41,
+      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    50,    51,
+      -1,    -1,    -1,    -1,    28,    29,    58,    31,    32,    33,
+      34,    35,    36,    -1,    38,    39,    40,    41,    -1,    -1,
+      -1,    -1,    -1,    -1,    -1,    -1,    50,    51,    -1,    -1,
+      -1,    28,    29,    57,    31,    32,    33,    34,    35,    36,
+      -1,    38,    39,    40,    41,    -1,    -1,    -1,    -1,    -1,
+      -1,    -1,    -1,    50,    51,    -1,    -1,    -1,    28,    29,
+      57,    31,    32,    33,    34,    35,    36,    -1,    38,    39,
       40,    41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
       50,    51,    -1,    -1,    -1,    28,    29,    57,    31,    32,
-      33,    34,    35,    36,    -1,    38,    39,    40,    41,    -1,
-      -1,    -1,    -1,    -1,    -1,    -1,    -1,    50,    51,    -1,
-      -1,    -1,    28,    29,    57,    31,    32,    33,    34,    35,
-      36,    -1,    38,    39,    40,    41,    -1,    -1,    -1,    -1,
-      -1,    -1,    -1,    -1,    50,    51,    -1,    -1,    -1,    28,
-      29,    57,    31,    32,    33,    34,    35,    36,    -1,    38,
-      39,    40,    41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      -1,    50,    51,    -1,    -1,    28,    29,    56,    31,    32,
       33,    34,    35,    36,    -1,    38,    39,    40,    41,    -1,
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    50,    51,    -1,
       -1,    28,    29,    56,    31,    32,    33,    34,    35,    36,
@@ -1717,10 +1659,12 @@ static const yytype_int16 yycheck[] =
       -1,    -1,    -1,    -1,    -1,    -1,    -1,    50,    51,    -1,
       -1,    28,    29,    56,    31,    32,    33,    34,    35,    36,
       -1,    38,    39,    40,    41,    -1,    -1,    -1,    -1,    -1,
-      -1,    -1,    -1,    50,    51,    -1,    -1,    28,    -1,    56,
+      -1,    -1,    -1,    50,    51,    -1,    -1,    28,    29,    56,
       31,    32,    33,    34,    35,    36,    -1,    38,    39,    40,
-      41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      51
+      41,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    50,
+      51,    -1,    -1,    28,    -1,    56,    31,    32,    33,    34,
+      35,    36,    -1,    38,    39,    40,    41,    -1,    -1,    -1,
+      -1,    -1,    -1,    -1,    -1,    -1,    51
 };
 
 /* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
@@ -1749,12 +1693,13 @@ static const yytype_int8 yystos[] =
       21,    22,    23,    24,    25,    26,    27,    70,    85,    45,
       85,    46,    45,    81,    45,    84,    56,    85,    56,    61,
       56,    60,    85,    85,    85,     7,     8,    85,    72,    85,
-      56,    58,    55,    37,    56,    56,    61,    58,    58,    60,
-      60,    86,    56,    56,    56,    57,    85,    58,    58,    58,
-      86,    85,    59,    59,    45,    82,    57,    59,    59,    59,
-      73,    57,    85,    56,    58,    85,    85,    49,    85,    85,
-      85,    73,    56,    58,    60,    60,    60,    60,    60,     7,
-      57,    37,    37,    57,    73,    85,    85,    73,    58,    58
+      56,    58,    55,    37,    56,    56,    61,    58,    58,    61,
+      60,    60,    86,    56,    56,    56,    57,    85,    58,    58,
+      58,    86,    85,    59,    59,    45,    82,    45,    57,    59,
+      59,    59,    73,    57,    85,    56,    58,    85,    85,    58,
+      49,    85,    85,    85,    73,    56,    58,    60,    60,    60,
+      60,    60,     7,    57,    37,    37,    57,    73,    85,    85,
+      73,    58,    58
 };
 
 /* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
@@ -1767,12 +1712,12 @@ static const yytype_int8 yyr1[] =
       75,    75,    76,    76,    76,    76,    76,    76,    76,    76,
       76,    76,    76,    76,    76,    76,    76,    76,    76,    76,
       76,    77,    77,    78,    78,    79,    79,    80,    80,    80,
-      80,    80,    80,    81,    81,    82,    82,    83,    83,    84,
-      84,    85,    85,    85,    85,    85,    85,    85,    85,    85,
+      80,    80,    80,    80,    81,    81,    82,    82,    83,    83,
+      84,    84,    85,    85,    85,    85,    85,    85,    85,    85,
       85,    85,    85,    85,    85,    85,    85,    85,    85,    85,
       85,    85,    85,    85,    85,    85,    85,    85,    85,    85,
-      85,    85,    85,    85,    85,    85,    85,    85,    85,    86,
-      86,    86
+      85,    85,    85,    85,    85,    85,    85,    85,    85,    85,
+      86,    86,    86
 };
 
 /* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
@@ -1785,12 +1730,12 @@ static const yytype_int8 yyr2[] =
        1,     2,     3,     2,     4,     8,     6,     7,     5,     7,
       11,     8,     4,     4,     6,    10,     3,     1,     3,    11,
       11,     2,     0,     1,     0,     2,     1,     7,     5,     7,
-       5,     5,     5,     1,     3,     3,     5,     3,     1,     4,
-       6,     3,     3,     3,     3,     3,     3,     3,     3,     3,
-       3,     3,     3,     3,     3,     2,     2,     3,     2,     2,
-       8,     8,     2,     5,     4,     4,     1,     4,     4,     1,
-       1,     1,     1,     1,     1,     1,     1,     3,     8,     1,
-       3,     0
+       5,     5,     9,     5,     1,     3,     3,     5,     3,     1,
+       4,     6,     3,     3,     3,     3,     3,     3,     3,     3,
+       3,     3,     3,     3,     3,     3,     2,     2,     3,     2,
+       2,     8,     8,     2,     5,     4,     4,     1,     4,     4,
+       1,     1,     1,     1,     1,     1,     1,     1,     3,     8,
+       1,     3,     0
 };
 
 
@@ -2367,31 +2312,31 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* program: funcs  */
-#line 790 "parser.y"
+#line 731 "parser.y"
           { root = create_node("CODE", 1, (yyvsp[0].node)); }
-#line 2373 "parser.tab.c"
+#line 2318 "parser.tab.c"
     break;
 
   case 3: /* funcs: func  */
-#line 794 "parser.y"
+#line 735 "parser.y"
          { (yyval.node) = (yyvsp[0].node); }
-#line 2379 "parser.tab.c"
+#line 2324 "parser.tab.c"
     break;
 
   case 4: /* funcs: func funcs  */
-#line 795 "parser.y"
+#line 736 "parser.y"
                { (yyval.node) = create_node("FUNC", 2, (yyvsp[-1].node), (yyvsp[0].node)); }
-#line 2385 "parser.tab.c"
+#line 2330 "parser.tab.c"
     break;
 
   case 5: /* funcs: %empty  */
-#line 796 "parser.y"
+#line 737 "parser.y"
                 { (yyval.node) = NULL; }
-#line 2391 "parser.tab.c"
+#line 2336 "parser.tab.c"
     break;
 
   case 6: /* func: func_header var_decls block  */
-#line 800 "parser.y"
+#line 741 "parser.y"
                                 {
       if (!ends_with_return((yyvsp[0].node)) && strlen(current_return_type) > 0) {
           missing_return_error = 1;
@@ -2399,13 +2344,13 @@ yyreduce:
       }
       (yyval.node) = create_node((yyvsp[-2].node)->name, 3, (yyvsp[-2].node)->children[0], (yyvsp[-2].node)->children[1], create_node("BODY", 2, (yyvsp[-1].node), (yyvsp[0].node)));
       pop_return_type();
-      clear_vars(); // Clear variables after the function is fully processed
+      clear_vars(); 
   }
-#line 2405 "parser.tab.c"
+#line 2350 "parser.tab.c"
     break;
 
   case 7: /* nested_func: func_header var_decls block  */
-#line 812 "parser.y"
+#line 753 "parser.y"
                                 {
       if (!ends_with_return((yyvsp[0].node)) && strlen(current_return_type) > 0) {
           missing_return_error = 1;
@@ -2413,13 +2358,13 @@ yyreduce:
       }
       (yyval.node) = create_node((yyvsp[-2].node)->name, 3, (yyvsp[-2].node)->children[0], (yyvsp[-2].node)->children[1], create_node("BODY", 2, (yyvsp[-1].node), (yyvsp[0].node)));
       pop_return_type();
-      clear_vars(); // Clear variables after the function is fully processed
+      clear_vars(); 
   }
-#line 2419 "parser.tab.c"
+#line 2364 "parser.tab.c"
     break;
 
   case 8: /* func_header: DEF IDENTIFIER '(' parameters ')' ':' RETURNS ret_type  */
-#line 824 "parser.y"
+#line 765 "parser.y"
                                                            {
       param_count = 0;
       push_return_type(return_type_to_push);
@@ -2432,7 +2377,6 @@ yyreduce:
           param_count = params->child_count;
           // Add parameters to variable list
           for (int i = 0; i < param_count; i++) {
-              // Parse parameter string to extract type
               char* param_str = params->children[i]->name;
               char* type_start = strchr(param_str, ' ') + 1;
               char* type_end = strchr(type_start, ' ');
@@ -2446,25 +2390,23 @@ yyreduce:
               add_var(name_start, type); 
           }
       }
-      add_function((yyvsp[-6].str), param_count, params, (yyvsp[0].node)->name); // Pass return type
+      add_function((yyvsp[-6].str), param_count, params, (yyvsp[0].node)->name); 
       (yyval.node) = create_node((yyvsp[-6].str), 2, params, ret_type_node);
   }
-#line 2453 "parser.tab.c"
+#line 2397 "parser.tab.c"
     break;
 
   case 9: /* func_header: DEF IDENTIFIER '(' parameters ')' ':'  */
-#line 853 "parser.y"
+#line 793 "parser.y"
                                           {
       param_count = 0;
       push_return_type(""); 
       Node* params = (yyvsp[-2].node);
       Node* ret_type_node = create_node("RET NONE", 0);
       
-      // Check if this is the main function
       if (strcmp((yyvsp[-4].str), "_main_") == 0) {
-          has_main = 1;  // Set the flag that we've found main
+          has_main = 1;  
           
-          // Check if main has parameters
           if (strcmp(params->name, "PARS NONE") != 0) {
               main_with_params_error = 1;
               yyerror("Error: _main_() cannot have parameters");
@@ -2473,7 +2415,6 @@ yyreduce:
       
       if (strcmp(params->name, "PARS NONE") != 0) {
           param_count = params->child_count;
-          // Add parameters to variable list
           for (int i = 0; i < param_count; i++) {
               // Parse parameter string to extract type
               char* param_str = params->children[i]->name;
@@ -2490,21 +2431,20 @@ yyreduce:
           }
       }
       
-      add_function((yyvsp[-4].str), param_count, params, NULL); // NULL for procedures
+      add_function((yyvsp[-4].str), param_count, params, NULL); 
       (yyval.node) = create_node((yyvsp[-4].str), 2, params, ret_type_node);
   }
-#line 2497 "parser.tab.c"
+#line 2438 "parser.tab.c"
     break;
 
   case 10: /* parameters: parameter ';' parameters  */
-#line 895 "parser.y"
+#line 832 "parser.y"
                              {
       Node* pars = create_node("PARS", (yyvsp[0].node)->child_count + 1);
       pars->children[0] = (yyvsp[-2].node);
       
-      // Check if parameter is in correct order
       char* param_str = (yyvsp[-2].node)->name;
-      int param_index = 1; // First parameter should be par1
+      int param_index = 1; 
       /*
       if (!check_param_order(param_str, param_index)) {
           // Just set the flag, don't exit
@@ -2525,13 +2465,12 @@ yyreduce:
       }
       (yyval.node) = pars;
   }
-#line 2529 "parser.tab.c"
+#line 2469 "parser.tab.c"
     break;
 
   case 11: /* parameters: parameter  */
-#line 922 "parser.y"
+#line 858 "parser.y"
               {
-      // Check if this single parameter is par1
       char* param_str = (yyvsp[0].node)->name;/*
       if (!check_param_order(param_str, 1)) {
           // Just set the flag, don't exit
@@ -2539,165 +2478,164 @@ yyreduce:
       }*/
       (yyval.node) = create_node("PARS", 1, (yyvsp[0].node));
   }
-#line 2543 "parser.tab.c"
+#line 2482 "parser.tab.c"
     break;
 
   case 12: /* parameters: %empty  */
-#line 931 "parser.y"
+#line 866 "parser.y"
                 {
       (yyval.node) = create_node("PARS NONE", 0);
   }
-#line 2551 "parser.tab.c"
+#line 2490 "parser.tab.c"
     break;
 
   case 13: /* parameter: IDENTIFIER type ':' IDENTIFIER  */
-#line 937 "parser.y"
+#line 872 "parser.y"
                                    {
       char temp[100];
       sprintf(temp, "par%s %s %s", (yyvsp[-3].str) + 3, (yyvsp[-2].node)->name, (yyvsp[0].str));
       (yyval.node) = create_node(temp, 0);
-      // We'll add the variable when processing all parameters in func_header
   }
-#line 2562 "parser.tab.c"
+#line 2500 "parser.tab.c"
     break;
 
   case 14: /* parameter: IDENTIFIER ':' IDENTIFIER  */
-#line 943 "parser.y"
+#line 877 "parser.y"
                               {
       param_error = 1;
       yyerror("no type defined");
       (yyval.node) = create_node("ERROR", 0);
   }
-#line 2572 "parser.tab.c"
+#line 2510 "parser.tab.c"
     break;
 
   case 15: /* ret_type: INT  */
-#line 951 "parser.y"
+#line 885 "parser.y"
         { strcpy(return_type_to_push, "INT"); (yyval.node) = create_node("INT", 0); }
-#line 2578 "parser.tab.c"
+#line 2516 "parser.tab.c"
     break;
 
   case 16: /* ret_type: REAL  */
-#line 952 "parser.y"
+#line 886 "parser.y"
          { strcpy(return_type_to_push, "REAL"); (yyval.node) = create_node("REAL", 0); }
-#line 2584 "parser.tab.c"
+#line 2522 "parser.tab.c"
     break;
 
   case 17: /* ret_type: CHAR  */
-#line 953 "parser.y"
+#line 887 "parser.y"
          { strcpy(return_type_to_push, "CHAR"); (yyval.node) = create_node("CHAR", 0); }
-#line 2590 "parser.tab.c"
+#line 2528 "parser.tab.c"
     break;
 
   case 18: /* ret_type: BOOL  */
-#line 954 "parser.y"
+#line 888 "parser.y"
          { strcpy(return_type_to_push, "BOOL"); (yyval.node) = create_node("BOOL", 0); }
-#line 2596 "parser.tab.c"
+#line 2534 "parser.tab.c"
     break;
 
   case 19: /* ret_type: INT_PTR  */
-#line 955 "parser.y"
+#line 889 "parser.y"
             { strcpy(return_type_to_push, "INT_PTR"); (yyval.node) = create_node("INT_PTR", 0); }
-#line 2602 "parser.tab.c"
+#line 2540 "parser.tab.c"
     break;
 
   case 20: /* ret_type: REAL_PTR  */
-#line 956 "parser.y"
+#line 890 "parser.y"
              { strcpy(return_type_to_push, "REAL_PTR"); (yyval.node) = create_node("REAL_PTR", 0); }
-#line 2608 "parser.tab.c"
+#line 2546 "parser.tab.c"
     break;
 
   case 21: /* ret_type: CHAR_PTR  */
-#line 957 "parser.y"
+#line 891 "parser.y"
              { strcpy(return_type_to_push, "CHAR_PTR"); (yyval.node) = create_node("CHAR_PTR", 0); }
-#line 2614 "parser.tab.c"
+#line 2552 "parser.tab.c"
     break;
 
   case 22: /* ret_type: STRING  */
-#line 958 "parser.y"
+#line 892 "parser.y"
            { 
       string_return_error = 1;
       yyerror("Error: Functions cannot return type string");
-      strcpy(return_type_to_push, ""); // Set empty to avoid further errors
+      strcpy(return_type_to_push, ""); 
       (yyval.node) = create_node("ERROR", 0); 
     }
-#line 2625 "parser.tab.c"
+#line 2563 "parser.tab.c"
     break;
 
   case 23: /* type: INT  */
-#line 967 "parser.y"
+#line 901 "parser.y"
         { (yyval.node) = create_node("INT", 0); }
-#line 2631 "parser.tab.c"
+#line 2569 "parser.tab.c"
     break;
 
   case 24: /* type: REAL  */
-#line 968 "parser.y"
+#line 902 "parser.y"
          { (yyval.node) = create_node("REAL", 0); }
-#line 2637 "parser.tab.c"
+#line 2575 "parser.tab.c"
     break;
 
   case 25: /* type: CHAR  */
-#line 969 "parser.y"
+#line 903 "parser.y"
          { (yyval.node) = create_node("CHAR", 0); }
-#line 2643 "parser.tab.c"
+#line 2581 "parser.tab.c"
     break;
 
   case 26: /* type: BOOL  */
-#line 970 "parser.y"
+#line 904 "parser.y"
          { (yyval.node) = create_node("BOOL", 0); }
-#line 2649 "parser.tab.c"
+#line 2587 "parser.tab.c"
     break;
 
   case 27: /* type: STRING  */
-#line 971 "parser.y"
+#line 905 "parser.y"
            { (yyval.node) = create_node("STRING", 0); }
-#line 2655 "parser.tab.c"
+#line 2593 "parser.tab.c"
     break;
 
   case 28: /* type: INT_PTR  */
-#line 972 "parser.y"
+#line 906 "parser.y"
             { (yyval.node) = create_node("INT_PTR", 0); }
-#line 2661 "parser.tab.c"
+#line 2599 "parser.tab.c"
     break;
 
   case 29: /* type: REAL_PTR  */
-#line 973 "parser.y"
+#line 907 "parser.y"
              { (yyval.node) = create_node("REAL_PTR", 0); }
-#line 2667 "parser.tab.c"
+#line 2605 "parser.tab.c"
     break;
 
   case 30: /* type: CHAR_PTR  */
-#line 974 "parser.y"
+#line 908 "parser.y"
              { (yyval.node) = create_node("CHAR_PTR", 0); }
-#line 2673 "parser.tab.c"
+#line 2611 "parser.tab.c"
     break;
 
   case 31: /* block: BEGIN_T inner_block END_T  */
-#line 978 "parser.y"
+#line 912 "parser.y"
                               { (yyval.node) = (yyvsp[-1].node); }
-#line 2679 "parser.tab.c"
+#line 2617 "parser.tab.c"
     break;
 
   case 32: /* block: BEGIN_T END_T  */
-#line 979 "parser.y"
+#line 913 "parser.y"
                   { (yyval.node) = create_node("BLOCK", 0); }
-#line 2685 "parser.tab.c"
+#line 2623 "parser.tab.c"
     break;
 
   case 33: /* body: VAR optional_var_list block  */
-#line 984 "parser.y"
+#line 918 "parser.y"
                                 { (yyval.node) = create_node("VAR_BLOCK", 2, (yyvsp[-1].node), (yyvsp[0].node)); }
-#line 2691 "parser.tab.c"
+#line 2629 "parser.tab.c"
     break;
 
   case 34: /* body: block  */
-#line 985 "parser.y"
+#line 919 "parser.y"
           { (yyval.node) = (yyvsp[0].node); }
-#line 2697 "parser.tab.c"
+#line 2635 "parser.tab.c"
     break;
 
   case 35: /* inner_block: nested_func inner_block  */
-#line 989 "parser.y"
+#line 923 "parser.y"
                             {
       if ((yyvsp[0].node) == NULL)
           (yyval.node) = create_node("BLOCK", 1, (yyvsp[-1].node));
@@ -2709,11 +2647,11 @@ yyreduce:
           (yyval.node) = merged;
       }
   }
-#line 2713 "parser.tab.c"
+#line 2651 "parser.tab.c"
     break;
 
   case 36: /* inner_block: stmts inner_block  */
-#line 1000 "parser.y"
+#line 934 "parser.y"
                       {
       if ((yyvsp[0].node) == NULL)
           (yyval.node) = create_node("BLOCK", 1, (yyvsp[-1].node));
@@ -2725,35 +2663,35 @@ yyreduce:
           (yyval.node) = merged;
       }
   }
-#line 2729 "parser.tab.c"
+#line 2667 "parser.tab.c"
     break;
 
   case 37: /* inner_block: nested_func  */
-#line 1011 "parser.y"
+#line 945 "parser.y"
                 { (yyval.node) = create_node("BLOCK", 1, (yyvsp[0].node)); }
-#line 2735 "parser.tab.c"
+#line 2673 "parser.tab.c"
     break;
 
   case 38: /* inner_block: stmts  */
-#line 1012 "parser.y"
+#line 946 "parser.y"
           { (yyval.node) = create_node("BLOCK", 1, (yyvsp[0].node)); }
-#line 2741 "parser.tab.c"
+#line 2679 "parser.tab.c"
     break;
 
   case 39: /* inner_block: %empty  */
-#line 1013 "parser.y"
+#line 947 "parser.y"
                 { (yyval.node) = create_node("BLOCK", 0); }
-#line 2747 "parser.tab.c"
+#line 2685 "parser.tab.c"
     break;
 
   case 40: /* stmts: stmt  */
-#line 1017 "parser.y"
+#line 951 "parser.y"
          { (yyval.node) = (yyvsp[0].node); }
-#line 2753 "parser.tab.c"
+#line 2691 "parser.tab.c"
     break;
 
   case 41: /* stmts: stmt stmts  */
-#line 1018 "parser.y"
+#line 952 "parser.y"
                {
       if (strcmp((yyvsp[0].node)->name, "BLOCK") == 0) {
           Node* merged = create_node("BLOCK", (yyvsp[0].node)->child_count + 1);
@@ -2765,11 +2703,11 @@ yyreduce:
           (yyval.node) = create_node("BLOCK", 2, (yyvsp[-1].node), (yyvsp[0].node));
       }
   }
-#line 2769 "parser.tab.c"
+#line 2707 "parser.tab.c"
     break;
 
   case 42: /* stmt: RETURN expr ';'  */
-#line 1032 "parser.y"
+#line 966 "parser.y"
                     {
       current_func_has_return = 1;
       if (!check_return_type((yyvsp[-1].node))) {
@@ -2777,31 +2715,31 @@ yyreduce:
       }
       (yyval.node) = create_node("RET", 1, (yyvsp[-1].node));
   }
-#line 2781 "parser.tab.c"
+#line 2719 "parser.tab.c"
     break;
 
   case 43: /* stmt: RETURN ';'  */
-#line 1039 "parser.y"
+#line 973 "parser.y"
                {
       current_func_has_return = 1;
       if (strlen(current_return_type) > 0)
           yyerror("Function with return type must return a value");
       (yyval.node) = create_node("RET", 0);
   }
-#line 2792 "parser.tab.c"
+#line 2730 "parser.tab.c"
     break;
 
   case 44: /* stmt: IDENTIFIER ASSIGN expr ';'  */
-#line 1045 "parser.y"
+#line 979 "parser.y"
                                {
     check_var_use((yyvsp[-3].str), yylineno);
     (yyval.node) = create_node("=", 2, create_node((yyvsp[-3].str), 0), (yyvsp[-1].node));
   }
-#line 2801 "parser.tab.c"
+#line 2739 "parser.tab.c"
     break;
 
   case 45: /* stmt: IDENTIFIER ASSIGN CALL IDENTIFIER '(' args ')' ';'  */
-#line 1049 "parser.y"
+#line 983 "parser.y"
                                                        {
     check_var_use((yyvsp[-7].str), yylineno);
     
@@ -2813,70 +2751,63 @@ yyreduce:
         arg_count = (yyvsp[-2].node)->child_count;
     }
     
-    // Check parameter count even if function is not declared
     int required_count = get_function_param_count((yyvsp[-4].str));
     if (required_count >= 0 && required_count != arg_count) {
         param_count_mismatch = 1;
-        sprintf(yytext, "%s", (yyvsp[-4].str));  // Store function name for error
-        yylineno = (yylsp[-4]).first_line;   // Use the line number of function name token
+        sprintf(yytext, "%s", (yyvsp[-4].str));  
+        yylineno = (yylsp[-4]).first_line;   
         yyerror("Parameter count mismatch");
     } 
     else if (!func_found) {
-        // Only trigger undeclared function error if param count was correct
         undeclared_function_error = 1;
         sprintf(yytext, "%s", (yyvsp[-4].str));
         yylineno = (yylsp[-4]).first_line;
         yyerror("Function called before declaration");
     }
     else {
-        // If function exists and param count is correct, check param types
         check_param_types((yyvsp[-4].str), (yyvsp[-2].node), yylineno);
     }
     
     Node* call_node = create_node("CALL", 2, create_node((yyvsp[-4].str), 0), (yyvsp[-2].node));
     (yyval.node) = create_node("=", 2, create_node((yyvsp[-7].str), 0), call_node);
 }
-#line 2840 "parser.tab.c"
+#line 2775 "parser.tab.c"
     break;
 
   case 46: /* stmt: CALL IDENTIFIER '(' args ')' ';'  */
-#line 1083 "parser.y"
+#line 1014 "parser.y"
                                      {
     int func_found = check_function_call((yyvsp[-4].str), yylineno);
     
-    // Count arguments
     int arg_count = 0;
     if (strcmp((yyvsp[-2].node)->name, "ARGS NONE") != 0) {
         arg_count = (yyvsp[-2].node)->child_count;
     }
     
-    // Check parameter count even if function is not declared
     int required_count = get_function_param_count((yyvsp[-4].str));
     if (required_count >= 0 && required_count != arg_count) {
         param_count_mismatch = 1;
-        sprintf(yytext, "%s", (yyvsp[-4].str));  // Store function name for error
-        yylineno = (yylsp[-4]).first_line;  // Use the line number of function name token
+        sprintf(yytext, "%s", (yyvsp[-4].str));  
+        yylineno = (yylsp[-4]).first_line;  
         yyerror("Parameter count mismatch");
     } 
     else if (!func_found) {
-        // Only trigger undeclared function error if param count was correct
         undeclared_function_error = 1;
         sprintf(yytext, "%s", (yyvsp[-4].str));
         yylineno = (yylsp[-4]).first_line;
         yyerror("Function called before declaration");
     }
     else {
-        // If function exists and param count is correct, check param types
         check_param_types((yyvsp[-4].str), (yyvsp[-2].node), yylineno);
     }
     
     (yyval.node) = create_node("CALL", 2, create_node((yyvsp[-4].str), 0), (yyvsp[-2].node));
 }
-#line 2876 "parser.tab.c"
+#line 2807 "parser.tab.c"
     break;
 
   case 47: /* stmt: IDENTIFIER '[' expr ']' ASSIGN expr ';'  */
-#line 1114 "parser.y"
+#line 1041 "parser.y"
                                             {
     check_var_use((yyvsp[-6].str), yylineno);
     if (is_string_expr((yyvsp[-4].node))) {
@@ -2888,17 +2819,13 @@ yyreduce:
         yyerror("Array index must be of integer type");
     }
     
-    // Get variable type and debug it
     char* var_type = get_var_type((yyvsp[-6].str));
     printf("DEBUG: Assigning to array '%s' of type '%s'\n", 
            (yyvsp[-6].str), var_type ? var_type : "unknown");
     
-    // Debug the expression being assigned
     debug_node((yyvsp[-1].node), "Expression being assigned");
     
-    // Check if we're assigning a number or numeric array to a string array
     if (var_type && strcmp(var_type, "STRING") == 0) {
-        // If it's an array element access
         if (strcmp((yyvsp[-1].node)->name, "ARRAY_ELEM") == 0) {
             char* src_array_name = (yyvsp[-1].node)->children[0]->name;
             char* src_array_type = get_var_type(src_array_name);
@@ -2912,7 +2839,6 @@ yyreduce:
                 yyerror("Cannot assign numeric array element to string array");
             }
         }
-        // Direct numeric literal assignment
         else if ((yyvsp[-1].node)->child_count == 0 && isdigit((yyvsp[-1].node)->name[0])) {
             non_string_array_access_error = 1;
             yyerror("Cannot assign numeric value to string array element");
@@ -2922,23 +2848,20 @@ yyreduce:
     Node* arr_elem = create_node("ARRAY_ELEM", 2, create_node((yyvsp[-6].str), 0), (yyvsp[-4].node));
     (yyval.node) = create_node("=", 2, arr_elem, (yyvsp[-1].node));
   }
-#line 2926 "parser.tab.c"
+#line 2852 "parser.tab.c"
     break;
 
   case 48: /* stmt: MUL IDENTIFIER ASSIGN expr ';'  */
-#line 1159 "parser.y"
+#line 1081 "parser.y"
                                    {
     check_var_use((yyvsp[-3].str), yylineno);
     
-    // Get variable type
     char* var_type = get_var_type((yyvsp[-3].str));
-    
-    // Check if it's a pointer type
+
     if (var_type) {
         if (strcmp(var_type, "INT_PTR") != 0 && 
             strcmp(var_type, "REAL_PTR") != 0 && 
             strcmp(var_type, "CHAR_PTR") != 0) {
-            // Error: Can't dereference non-pointer
             dereference_type_error = 1;
             sprintf(yytext, "%s", (yyvsp[-3].str));
             yyerror("Cannot dereference non-pointer variable");
@@ -2947,11 +2870,11 @@ yyreduce:
     
     (yyval.node) = create_node("= *", 2, create_node((yyvsp[-3].str), 0), (yyvsp[-1].node));
   }
-#line 2951 "parser.tab.c"
+#line 2874 "parser.tab.c"
     break;
 
   case 49: /* stmt: IF expr ':' body ELSE ':' body  */
-#line 1179 "parser.y"
+#line 1098 "parser.y"
                                    {
       if (!is_bool_expr((yyvsp[-5].node))) {
           if_expr_type_error = 1;
@@ -2959,11 +2882,11 @@ yyreduce:
       }
       (yyval.node) = create_node("IF-ELSE", 3, (yyvsp[-5].node), (yyvsp[-3].node), (yyvsp[0].node));
   }
-#line 2963 "parser.tab.c"
+#line 2886 "parser.tab.c"
     break;
 
   case 50: /* stmt: IF expr ':' body ELIF expr ':' body ELSE ':' body  */
-#line 1186 "parser.y"
+#line 1105 "parser.y"
                                                       {
       if (!is_bool_expr((yyvsp[-9].node)) || !is_bool_expr((yyvsp[-5].node))) {
           if_expr_type_error = 1;
@@ -2971,11 +2894,11 @@ yyreduce:
       }
       (yyval.node) = create_node("IF-ELIF-ELSE", 5, (yyvsp[-9].node), (yyvsp[-7].node), (yyvsp[-5].node), (yyvsp[-3].node), (yyvsp[0].node));
   }
-#line 2975 "parser.tab.c"
+#line 2898 "parser.tab.c"
     break;
 
   case 51: /* stmt: IF expr ':' body ELIF expr ':' body  */
-#line 1193 "parser.y"
+#line 1112 "parser.y"
                                         {
       if (!is_bool_expr((yyvsp[-6].node)) || !is_bool_expr((yyvsp[-2].node))) {
           if_expr_type_error = 1;
@@ -2983,11 +2906,11 @@ yyreduce:
       }
       (yyval.node) = create_node("IF-ELIF", 4, (yyvsp[-6].node), (yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[0].node));
   }
-#line 2987 "parser.tab.c"
+#line 2910 "parser.tab.c"
     break;
 
   case 52: /* stmt: IF expr ':' body  */
-#line 1200 "parser.y"
+#line 1119 "parser.y"
                      {
       if (!is_bool_expr((yyvsp[-2].node))) {
           if_expr_type_error = 1;
@@ -2995,11 +2918,11 @@ yyreduce:
       }
       (yyval.node) = create_node("IF", 2, (yyvsp[-2].node), (yyvsp[0].node));
   }
-#line 2999 "parser.tab.c"
+#line 2922 "parser.tab.c"
     break;
 
   case 53: /* stmt: WHILE expr ':' body  */
-#line 1207 "parser.y"
+#line 1126 "parser.y"
                         {
       if (!is_bool_expr((yyvsp[-2].node))) {
           if_expr_type_error = 1;
@@ -3007,11 +2930,11 @@ yyreduce:
       }
       (yyval.node) = create_node("WHILE", 2, (yyvsp[-2].node), (yyvsp[0].node));
   }
-#line 3011 "parser.tab.c"
+#line 2934 "parser.tab.c"
     break;
 
   case 54: /* stmt: DO ':' body WHILE expr ';'  */
-#line 1214 "parser.y"
+#line 1133 "parser.y"
                                {
       if (!is_bool_expr((yyvsp[-1].node))) {
           if_expr_type_error = 1;
@@ -3019,11 +2942,11 @@ yyreduce:
       }
       (yyval.node) = create_node("DO-WHILE", 2, (yyvsp[-3].node), (yyvsp[-1].node));
   }
-#line 3023 "parser.tab.c"
+#line 2946 "parser.tab.c"
     break;
 
   case 55: /* stmt: FOR '(' expr ';' expr ';' expr ')' ':' body  */
-#line 1221 "parser.y"
+#line 1140 "parser.y"
                                                 {
       if (!is_bool_expr((yyvsp[-5].node))) {
           if_expr_type_error = 1;
@@ -3032,81 +2955,81 @@ yyreduce:
       Node* cond = create_node("FOR_COND", 3, (yyvsp[-7].node), (yyvsp[-5].node), (yyvsp[-3].node));
       (yyval.node) = create_node("FOR", 2, cond, (yyvsp[0].node));
   }
-#line 3036 "parser.tab.c"
+#line 2959 "parser.tab.c"
     break;
 
   case 56: /* stmt: VAR optional_var_list block  */
-#line 1229 "parser.y"
+#line 1148 "parser.y"
                                 {
       (yyval.node) = create_node("BODY", 2, (yyvsp[-1].node), (yyvsp[0].node));
   }
-#line 3044 "parser.tab.c"
+#line 2967 "parser.tab.c"
     break;
 
   case 57: /* stmt: block  */
-#line 1232 "parser.y"
+#line 1151 "parser.y"
           {
       (yyval.node) = (yyvsp[0].node);
   }
-#line 3052 "parser.tab.c"
+#line 2975 "parser.tab.c"
     break;
 
   case 58: /* stmt: VAR optional_var_list stmt  */
-#line 1235 "parser.y"
+#line 1154 "parser.y"
                                {
       (yyval.node) = create_node("VAR_BLOCK", 2, (yyvsp[-1].node), (yyvsp[0].node));
   }
-#line 3060 "parser.tab.c"
+#line 2983 "parser.tab.c"
     break;
 
   case 59: /* stmt: '(' IDENTIFIER ADD expr ')' '[' expr ']' ASSIGN expr ';'  */
-#line 1238 "parser.y"
+#line 1157 "parser.y"
                                                              {
       check_var_use((yyvsp[-9].str), yylineno);
       array_pointer_arithmetic_error = 1;
       yyerror("Cannot add anything to array elements - they are not pointers");
       (yyval.node) = create_node("ERROR", 0);
   }
-#line 3071 "parser.tab.c"
+#line 2994 "parser.tab.c"
     break;
 
   case 60: /* stmt: '(' IDENTIFIER SUB expr ')' '[' expr ']' ASSIGN expr ';'  */
-#line 1244 "parser.y"
+#line 1163 "parser.y"
                                                              {
       check_var_use((yyvsp[-9].str), yylineno);
       array_pointer_arithmetic_error = 1;
       yyerror("Cannot add anything to array elements - they are not pointers");
       (yyval.node) = create_node("ERROR", 0);
   }
-#line 3082 "parser.tab.c"
+#line 3005 "parser.tab.c"
     break;
 
   case 61: /* var_decls: VAR optional_var_list  */
-#line 1254 "parser.y"
+#line 1172 "parser.y"
                           { (yyval.node) = (yyvsp[0].node); }
-#line 3088 "parser.tab.c"
+#line 3011 "parser.tab.c"
     break;
 
   case 62: /* var_decls: %empty  */
-#line 1255 "parser.y"
+#line 1173 "parser.y"
                 { (yyval.node) = create_node("BLOCK", 0); }
-#line 3094 "parser.tab.c"
+#line 3017 "parser.tab.c"
     break;
 
   case 63: /* optional_var_list: var_decl_list  */
-#line 1259 "parser.y"
+#line 1177 "parser.y"
                   { (yyval.node) = (yyvsp[0].node); }
-#line 3100 "parser.tab.c"
+#line 3023 "parser.tab.c"
     break;
 
   case 64: /* optional_var_list: %empty  */
-#line 1260 "parser.y"
+#line 1178 "parser.y"
                 { (yyval.node) = create_node("BLOCK", 0); }
-#line 3106 "parser.tab.c"
+#line 3029 "parser.tab.c"
     break;
 
   case 65: /* var_decl_list: var_decl_list var_single_decl  */
-#line 1264 "parser.y"
+#line 1182 "parser.y"
                                   {
       Node* merged = create_node("BLOCK", (yyvsp[-1].node)->child_count + 1);
       for (int i = 0; i < (yyvsp[-1].node)->child_count; i++)
@@ -3114,21 +3037,20 @@ yyreduce:
       merged->children[(yyvsp[-1].node)->child_count] = (yyvsp[0].node);
       (yyval.node) = merged;
   }
-#line 3118 "parser.tab.c"
+#line 3041 "parser.tab.c"
     break;
 
   case 66: /* var_decl_list: var_single_decl  */
-#line 1271 "parser.y"
+#line 1189 "parser.y"
                     { (yyval.node) = create_node("BLOCK", 1, (yyvsp[0].node)); }
-#line 3124 "parser.tab.c"
+#line 3047 "parser.tab.c"
     break;
 
   case 67: /* var_single_decl: TYPE BOOL ':' IDENTIFIER ',' IDENTIFIER ';'  */
-#line 1275 "parser.y"
+#line 1193 "parser.y"
                                                 {
-      // Handle this specific case: type bool:c,d;
-      add_var((yyvsp[-3].str), "BOOL");  // Add first variable with type
-      add_var((yyvsp[-1].str), "BOOL");  // Add second variable with type
+      add_var((yyvsp[-3].str), "BOOL");  
+      add_var((yyvsp[-1].str), "BOOL");  
       
       // Create nodes for both variables
       char temp1[100], temp2[100];
@@ -3142,13 +3064,12 @@ yyreduce:
       
       (yyval.node) = var_list;
   }
-#line 3146 "parser.tab.c"
+#line 3068 "parser.tab.c"
     break;
 
   case 68: /* var_single_decl: TYPE type ':' id_list ';'  */
-#line 1292 "parser.y"
+#line 1209 "parser.y"
                               {
-      // Regular type declarations without initialization
       char* type_name = (yyvsp[-3].node)->name;
       
       if ((yyvsp[-1].node)->child_count == 0) {
@@ -3171,11 +3092,11 @@ yyreduce:
           (yyval.node) = var_list;
       }
   }
-#line 3175 "parser.tab.c"
+#line 3096 "parser.tab.c"
     break;
 
   case 69: /* var_single_decl: TYPE type ':' IDENTIFIER ':' expr ';'  */
-#line 1316 "parser.y"
+#line 1232 "parser.y"
                                           {
       // Variable with initialization
       add_var((yyvsp[-3].str), (yyvsp[-5].node)->name);  // Add variable with type
@@ -3185,38 +3106,59 @@ yyreduce:
       Node* var_node = create_node(temp, 0);
       (yyval.node) = create_node("=", 2, var_node, (yyvsp[-1].node));
   }
-#line 3189 "parser.tab.c"
+#line 3110 "parser.tab.c"
     break;
 
   case 70: /* var_single_decl: TYPE BOOL ':' var_init_list ';'  */
-#line 1325 "parser.y"
+#line 1241 "parser.y"
                                     {
       // This is handled in var_init_list
       (yyval.node) = (yyvsp[-1].node);
   }
-#line 3198 "parser.tab.c"
+#line 3119 "parser.tab.c"
     break;
 
   case 71: /* var_single_decl: TYPE BOOL ':' IDENTIFIER ';'  */
-#line 1329 "parser.y"
-                                 {  // Single boolean without initialization
-      add_var((yyvsp[-1].str), "BOOL");  // Add with type
+#line 1245 "parser.y"
+                                 { 
+      add_var((yyvsp[-1].str), "BOOL");  
       
       char temp[100];
       sprintf(temp, "BOOL %s", (yyvsp[-1].str));
       (yyval.node) = create_node(temp, 0);
   }
-#line 3210 "parser.tab.c"
+#line 3131 "parser.tab.c"
     break;
 
-  case 72: /* var_single_decl: TYPE type ':' string_decl_list ';'  */
-#line 1336 "parser.y"
+  case 72: /* var_single_decl: TYPE type ':' IDENTIFIER ':' expr ',' IDENTIFIER ';'  */
+#line 1252 "parser.y"
+                                                         {
+      add_var((yyvsp[-5].str), (yyvsp[-7].node)->name);  
+      add_var((yyvsp[-1].str), (yyvsp[-7].node)->name);  
+      
+      char temp1[100], temp2[100];
+      sprintf(temp1, "%s %s", (yyvsp[-7].node)->name, (yyvsp[-5].str));
+      sprintf(temp2, "%s %s", (yyvsp[-7].node)->name, (yyvsp[-1].str));
+      
+      Node* var1_node = create_node(temp1, 0);
+      Node* var2_node = create_node(temp2, 0);
+      Node* assign_node = create_node("=", 2, var1_node, (yyvsp[-3].node));
+      
+      Node* var_list = create_node("VAR_LIST", 2);
+      var_list->children[0] = assign_node;
+      var_list->children[1] = var2_node;
+      
+      (yyval.node) = var_list;
+  }
+#line 3154 "parser.tab.c"
+    break;
+
+  case 73: /* var_single_decl: TYPE type ':' string_decl_list ';'  */
+#line 1270 "parser.y"
                                        {
-    // Process each array declaration with the correct type
     for (int i = 0; i < (yyvsp[-1].node)->child_count; i++) {
         Node* array_node = (yyvsp[-1].node)->children[i];
         
-        // Extract array name from the node name 
         if (strncmp(array_node->name, "STR ", 4) == 0) {
             char* name_start = array_node->name + 4;
             char* bracket_pos = strchr(name_start, '[');
@@ -3236,19 +3178,19 @@ yyreduce:
     }
     (yyval.node) = (yyvsp[-1].node);
 }
-#line 3240 "parser.tab.c"
+#line 3182 "parser.tab.c"
     break;
 
-  case 73: /* id_list: IDENTIFIER  */
-#line 1364 "parser.y"
+  case 74: /* id_list: IDENTIFIER  */
+#line 1296 "parser.y"
                {
       (yyval.node) = create_node((yyvsp[0].str), 0);  
   }
-#line 3248 "parser.tab.c"
+#line 3190 "parser.tab.c"
     break;
 
-  case 74: /* id_list: IDENTIFIER ',' id_list  */
-#line 1367 "parser.y"
+  case 75: /* id_list: IDENTIFIER ',' id_list  */
+#line 1299 "parser.y"
                            {
       // Create a node for this identifier
       Node* id_node = create_node((yyvsp[-2].str), 0);
@@ -3266,26 +3208,26 @@ yyreduce:
       }
       (yyval.node) = merged;
   }
-#line 3270 "parser.tab.c"
+#line 3212 "parser.tab.c"
     break;
 
-  case 75: /* var_init_list: IDENTIFIER ':' expr  */
-#line 1388 "parser.y"
+  case 76: /* var_init_list: IDENTIFIER ':' expr  */
+#line 1319 "parser.y"
                         {
-      add_var((yyvsp[-2].str), "BOOL");  // Add boolean variable
+      add_var((yyvsp[-2].str), "BOOL");  
       
       char temp[100];
       sprintf(temp, "BOOL %s", (yyvsp[-2].str));
       Node* var_node = create_node(temp, 0);
       (yyval.node) = create_node("=", 2, var_node, (yyvsp[0].node));
   }
-#line 3283 "parser.tab.c"
+#line 3225 "parser.tab.c"
     break;
 
-  case 76: /* var_init_list: IDENTIFIER ':' expr ',' var_init_list  */
-#line 1396 "parser.y"
+  case 77: /* var_init_list: IDENTIFIER ':' expr ',' var_init_list  */
+#line 1327 "parser.y"
                                           {
-      add_var((yyvsp[-4].str), "BOOL");  // Add boolean variable
+      add_var((yyvsp[-4].str), "BOOL");  
       
       char temp[100];
       sprintf(temp, "BOOL %s", (yyvsp[-4].str));
@@ -3297,11 +3239,11 @@ yyreduce:
           merged->children[i+1] = (yyvsp[0].node)->children[i];
       (yyval.node) = merged;
   }
-#line 3301 "parser.tab.c"
+#line 3243 "parser.tab.c"
     break;
 
-  case 77: /* string_decl_list: string_decl_list ',' string_decl  */
-#line 1413 "parser.y"
+  case 78: /* string_decl_list: string_decl_list ',' string_decl  */
+#line 1343 "parser.y"
                                      {
       Node* merged = create_node("BLOCK", (yyvsp[-2].node)->child_count + 1);
       for (int i = 0; i < (yyvsp[-2].node)->child_count; i++)
@@ -3309,41 +3251,41 @@ yyreduce:
       merged->children[(yyvsp[-2].node)->child_count] = (yyvsp[0].node);
       (yyval.node) = merged;
   }
-#line 3313 "parser.tab.c"
+#line 3255 "parser.tab.c"
     break;
 
-  case 78: /* string_decl_list: string_decl  */
-#line 1420 "parser.y"
+  case 79: /* string_decl_list: string_decl  */
+#line 1350 "parser.y"
                 {
       (yyval.node) = create_node("BLOCK", 1, (yyvsp[0].node));
   }
-#line 3321 "parser.tab.c"
+#line 3263 "parser.tab.c"
     break;
 
-  case 79: /* string_decl: IDENTIFIER '[' INT_LITERAL ']'  */
-#line 1426 "parser.y"
+  case 80: /* string_decl: IDENTIFIER '[' INT_LITERAL ']'  */
+#line 1356 "parser.y"
                                    {
       char temp[100];
       sprintf(temp, "STR %s[%s]", (yyvsp[-3].str), (yyvsp[-1].str));
       (yyval.node) = create_node(temp, 0);
-      // Do NOT add the variable here - it will be added in the parent rule
+    
   }
-#line 3332 "parser.tab.c"
+#line 3274 "parser.tab.c"
     break;
 
-  case 80: /* string_decl: IDENTIFIER '[' INT_LITERAL ']' ':' STRING_LITERAL  */
-#line 1432 "parser.y"
+  case 81: /* string_decl: IDENTIFIER '[' INT_LITERAL ']' ':' STRING_LITERAL  */
+#line 1362 "parser.y"
                                                       {
       char temp[100];
       sprintf(temp, "STR %s[%s]:%s", (yyvsp[-5].str), (yyvsp[-3].str), (yyvsp[0].str));
       (yyval.node) = create_node(temp, 0);
-      // Do NOT add the variable here - it will be added in the parent rule
+   
   }
-#line 3343 "parser.tab.c"
+#line 3285 "parser.tab.c"
     break;
 
-  case 81: /* expr: expr ADD expr  */
-#line 1442 "parser.y"
+  case 82: /* expr: expr ADD expr  */
+#line 1371 "parser.y"
                   { 
     Node* node = create_node("+", 2, (yyvsp[-2].node), (yyvsp[0].node));
     
@@ -3362,11 +3304,11 @@ yyreduce:
     
     (yyval.node) = node;
   }
-#line 3366 "parser.tab.c"
+#line 3308 "parser.tab.c"
     break;
 
-  case 82: /* expr: expr SUB expr  */
-#line 1460 "parser.y"
+  case 83: /* expr: expr SUB expr  */
+#line 1389 "parser.y"
                   { 
     Node* node = create_node("-", 2, (yyvsp[-2].node), (yyvsp[0].node));
     
@@ -3375,7 +3317,6 @@ yyreduce:
     char* right_type = get_expr_type((yyvsp[0].node));
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             arith_type_error = 1;
@@ -3385,20 +3326,18 @@ yyreduce:
     
     (yyval.node) = node;
   }
-#line 3389 "parser.tab.c"
+#line 3330 "parser.tab.c"
     break;
 
-  case 83: /* expr: expr MUL expr  */
-#line 1478 "parser.y"
+  case 84: /* expr: expr MUL expr  */
+#line 1406 "parser.y"
                   { 
     Node* node = create_node("*", 2, (yyvsp[-2].node), (yyvsp[0].node));
-    
-    // Type checking
+
     char* left_type = get_expr_type((yyvsp[-2].node));
     char* right_type = get_expr_type((yyvsp[0].node));
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             arith_type_error = 1;
@@ -3408,20 +3347,18 @@ yyreduce:
     
     (yyval.node) = node;
   }
-#line 3412 "parser.tab.c"
+#line 3351 "parser.tab.c"
     break;
 
-  case 84: /* expr: expr DIV expr  */
-#line 1496 "parser.y"
+  case 85: /* expr: expr DIV expr  */
+#line 1422 "parser.y"
                   { 
     Node* node = create_node("/", 2, (yyvsp[-2].node), (yyvsp[0].node));
     
-    // Type checking
     char* left_type = get_expr_type((yyvsp[-2].node));
     char* right_type = get_expr_type((yyvsp[0].node));
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             arith_type_error = 1;
@@ -3431,20 +3368,18 @@ yyreduce:
     
     (yyval.node) = node;
   }
-#line 3435 "parser.tab.c"
+#line 3372 "parser.tab.c"
     break;
 
-  case 85: /* expr: expr EQ expr  */
-#line 1514 "parser.y"
+  case 86: /* expr: expr EQ expr  */
+#line 1438 "parser.y"
                  { 
     Node* node = create_node("==", 2, (yyvsp[-2].node), (yyvsp[0].node));
     
-    // Type checking
     char* left_type = get_expr_type((yyvsp[-2].node));
     char* right_type = get_expr_type((yyvsp[0].node));
     
     if (left_type && right_type) {
-        // Types must be compatible
         if (strcmp(left_type, right_type) != 0 &&
             !((strcmp(left_type, "INT") == 0 && strcmp(right_type, "REAL") == 0) ||
               (strcmp(left_type, "REAL") == 0 && strcmp(right_type, "INT") == 0))) {
@@ -3455,20 +3390,18 @@ yyreduce:
     
     (yyval.node) = node;
   }
-#line 3459 "parser.tab.c"
+#line 3394 "parser.tab.c"
     break;
 
-  case 86: /* expr: expr NE expr  */
-#line 1533 "parser.y"
+  case 87: /* expr: expr NE expr  */
+#line 1455 "parser.y"
                  { 
     Node* node = create_node("!=", 2, (yyvsp[-2].node), (yyvsp[0].node));
     
-    // Type checking
     char* left_type = get_expr_type((yyvsp[-2].node));
     char* right_type = get_expr_type((yyvsp[0].node));
     
     if (left_type && right_type) {
-        // Types must be compatible
         if (strcmp(left_type, right_type) != 0 &&
             !((strcmp(left_type, "INT") == 0 && strcmp(right_type, "REAL") == 0) ||
               (strcmp(left_type, "REAL") == 0 && strcmp(right_type, "INT") == 0))) {
@@ -3479,20 +3412,18 @@ yyreduce:
     
     (yyval.node) = node;
   }
-#line 3483 "parser.tab.c"
+#line 3416 "parser.tab.c"
     break;
 
-  case 87: /* expr: expr GT expr  */
-#line 1552 "parser.y"
+  case 88: /* expr: expr GT expr  */
+#line 1472 "parser.y"
                  { 
     Node* node = create_node(">", 2, (yyvsp[-2].node), (yyvsp[0].node));
     
-    // Type checking
     char* left_type = get_expr_type((yyvsp[-2].node));
     char* right_type = get_expr_type((yyvsp[0].node));
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             comparison_type_error = 1;
@@ -3502,20 +3433,18 @@ yyreduce:
     
     (yyval.node) = node;
   }
-#line 3506 "parser.tab.c"
+#line 3437 "parser.tab.c"
     break;
 
-  case 88: /* expr: expr GE expr  */
-#line 1570 "parser.y"
+  case 89: /* expr: expr GE expr  */
+#line 1488 "parser.y"
                  { 
     Node* node = create_node(">=", 2, (yyvsp[-2].node), (yyvsp[0].node));
     
-    // Type checking
     char* left_type = get_expr_type((yyvsp[-2].node));
     char* right_type = get_expr_type((yyvsp[0].node));
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             comparison_type_error = 1;
@@ -3525,20 +3454,18 @@ yyreduce:
     
     (yyval.node) = node;
   }
-#line 3529 "parser.tab.c"
+#line 3458 "parser.tab.c"
     break;
 
-  case 89: /* expr: expr LT expr  */
-#line 1588 "parser.y"
+  case 90: /* expr: expr LT expr  */
+#line 1504 "parser.y"
                  { 
     Node* node = create_node("<", 2, (yyvsp[-2].node), (yyvsp[0].node));
     
-    // Type checking
     char* left_type = get_expr_type((yyvsp[-2].node));
     char* right_type = get_expr_type((yyvsp[0].node));
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             comparison_type_error = 1;
@@ -3548,20 +3475,18 @@ yyreduce:
     
     (yyval.node) = node;
   }
-#line 3552 "parser.tab.c"
+#line 3479 "parser.tab.c"
     break;
 
-  case 90: /* expr: expr LE expr  */
-#line 1606 "parser.y"
+  case 91: /* expr: expr LE expr  */
+#line 1520 "parser.y"
                  { 
     Node* node = create_node("<=", 2, (yyvsp[-2].node), (yyvsp[0].node));
-    
-    // Type checking
+
     char* left_type = get_expr_type((yyvsp[-2].node));
     char* right_type = get_expr_type((yyvsp[0].node));
     
     if (left_type && right_type) {
-        // Both operands must be numeric (INT or REAL)
         if ((strcmp(left_type, "INT") != 0 && strcmp(left_type, "REAL") != 0) ||
             (strcmp(right_type, "INT") != 0 && strcmp(right_type, "REAL") != 0)) {
             comparison_type_error = 1;
@@ -3571,14 +3496,13 @@ yyreduce:
     
     (yyval.node) = node;
   }
-#line 3575 "parser.tab.c"
+#line 3500 "parser.tab.c"
     break;
 
-  case 91: /* expr: expr AND expr  */
-#line 1625 "parser.y"
+  case 92: /* expr: expr AND expr  */
+#line 1537 "parser.y"
                   { 
       Node* node = create_node("AND", 2, (yyvsp[-2].node), (yyvsp[0].node));
-      // Type checking...
       char* left_type = get_expr_type((yyvsp[-2].node));
       char* right_type = get_expr_type((yyvsp[0].node));
       
@@ -3590,14 +3514,13 @@ yyreduce:
       }
       (yyval.node) = node;
   }
-#line 3594 "parser.tab.c"
+#line 3518 "parser.tab.c"
     break;
 
-  case 92: /* expr: expr BITWISE_AND expr  */
-#line 1639 "parser.y"
+  case 93: /* expr: expr BITWISE_AND expr  */
+#line 1550 "parser.y"
                           { 
       Node* node = create_node("BITWISE_AND", 2, (yyvsp[-2].node), (yyvsp[0].node));
-      // Type checking...
       char* left_type = get_expr_type((yyvsp[-2].node));
       char* right_type = get_expr_type((yyvsp[0].node));
       
@@ -3609,14 +3532,13 @@ yyreduce:
       }
       (yyval.node) = node;
   }
-#line 3613 "parser.tab.c"
+#line 3536 "parser.tab.c"
     break;
 
-  case 93: /* expr: expr OR expr  */
-#line 1653 "parser.y"
+  case 94: /* expr: expr OR expr  */
+#line 1563 "parser.y"
                  { 
       Node* node = create_node("OR", 2, (yyvsp[-2].node), (yyvsp[0].node));
-      // Type checking...
       char* left_type = get_expr_type((yyvsp[-2].node));
       char* right_type = get_expr_type((yyvsp[0].node));
       
@@ -3628,14 +3550,13 @@ yyreduce:
       }
       (yyval.node) = node;
   }
-#line 3632 "parser.tab.c"
+#line 3554 "parser.tab.c"
     break;
 
-  case 94: /* expr: expr BITWISE_OR expr  */
-#line 1667 "parser.y"
+  case 95: /* expr: expr BITWISE_OR expr  */
+#line 1576 "parser.y"
                          {
       Node* node = create_node("BITWISE_OR", 2, (yyvsp[-2].node), (yyvsp[0].node));
-      // Type checking...
       char* left_type = get_expr_type((yyvsp[-2].node));
       char* right_type = get_expr_type((yyvsp[0].node));
       
@@ -3647,14 +3568,13 @@ yyreduce:
       }
       (yyval.node) = node;
   }
-#line 3651 "parser.tab.c"
+#line 3572 "parser.tab.c"
     break;
 
-  case 95: /* expr: NOT expr  */
-#line 1681 "parser.y"
+  case 96: /* expr: NOT expr  */
+#line 1589 "parser.y"
              { 
       Node* node = create_node("NOT", 1, (yyvsp[0].node));
-      // Type checking...
       char* operand_type = get_expr_type((yyvsp[0].node));
       
       if (operand_type) {
@@ -3665,15 +3585,14 @@ yyreduce:
       }
       (yyval.node) = node;
   }
-#line 3669 "parser.tab.c"
+#line 3589 "parser.tab.c"
     break;
 
-  case 96: /* expr: BITWISE_NOT expr  */
-#line 1694 "parser.y"
+  case 97: /* expr: BITWISE_NOT expr  */
+#line 1601 "parser.y"
                      { 
       Node* node = create_node("BITWISE_NOT", 1, (yyvsp[0].node));
-      
-      // Type checking - operand must be boolean
+
       char* operand_type = get_expr_type((yyvsp[0].node));
       
       if (operand_type) {
@@ -3685,35 +3604,32 @@ yyreduce:
       
       (yyval.node) = node;
   }
-#line 3689 "parser.tab.c"
+#line 3608 "parser.tab.c"
     break;
 
-  case 97: /* expr: '(' expr ')'  */
-#line 1710 "parser.y"
+  case 98: /* expr: '(' expr ')'  */
+#line 1616 "parser.y"
                  { (yyval.node) = (yyvsp[-1].node); }
-#line 3695 "parser.tab.c"
+#line 3614 "parser.tab.c"
     break;
 
-  case 98: /* expr: SUB expr  */
-#line 1711 "parser.y"
+  case 99: /* expr: SUB expr  */
+#line 1617 "parser.y"
                           { (yyval.node) = create_node("-", 2, create_node("0", 0), (yyvsp[0].node)); }
-#line 3701 "parser.tab.c"
+#line 3620 "parser.tab.c"
     break;
 
-  case 99: /* expr: MUL IDENTIFIER  */
-#line 1712 "parser.y"
+  case 100: /* expr: MUL IDENTIFIER  */
+#line 1618 "parser.y"
                    { 
     check_var_use((yyvsp[0].str), yylineno);
     
-    // Get variable type
     char* var_type = get_var_type((yyvsp[0].str));
     
-    // Check if it's a pointer type
     if (var_type) {
         if (strcmp(var_type, "INT_PTR") != 0 && 
             strcmp(var_type, "REAL_PTR") != 0 && 
             strcmp(var_type, "CHAR_PTR") != 0) {
-            // Error: Can't dereference non-pointer
             dereference_type_error = 1;
             sprintf(yytext, "%s", (yyvsp[0].str));
             yyerror("Cannot dereference non-pointer variable");
@@ -3722,11 +3638,11 @@ yyreduce:
     
     (yyval.node) = create_node("*", 1, create_node((yyvsp[0].str), 0)); 
   }
-#line 3726 "parser.tab.c"
+#line 3642 "parser.tab.c"
     break;
 
-  case 100: /* expr: '(' IDENTIFIER ADD expr ')' '[' expr ']'  */
-#line 1733 "parser.y"
+  case 101: /* expr: '(' IDENTIFIER ADD expr ')' '[' expr ']'  */
+#line 1636 "parser.y"
                                              { 
       check_var_use((yyvsp[-6].str), yylineno);
       array_pointer_arithmetic_error = 1;
@@ -3734,29 +3650,27 @@ yyreduce:
       yyerror("Cannot add anything to array elements - they are not pointers");
       (yyval.node) = create_node("ERROR", 0);
   }
-#line 3738 "parser.tab.c"
+#line 3654 "parser.tab.c"
     break;
 
-  case 101: /* expr: '(' IDENTIFIER SUB expr ')' '[' expr ']'  */
-#line 1740 "parser.y"
+  case 102: /* expr: '(' IDENTIFIER SUB expr ')' '[' expr ']'  */
+#line 1643 "parser.y"
                                              { 
       check_var_use((yyvsp[-6].str), yylineno);
       array_pointer_arithmetic_error = 1;
       yyerror("Cannot add anything to array elements - they are not pointers");
       (yyval.node) = create_node("ERROR", 0);
   }
-#line 3749 "parser.tab.c"
+#line 3665 "parser.tab.c"
     break;
 
-  case 102: /* expr: ADDR IDENTIFIER  */
-#line 1746 "parser.y"
+  case 103: /* expr: ADDR IDENTIFIER  */
+#line 1649 "parser.y"
                     { 
     check_var_use((yyvsp[0].str), yylineno);
     
-    // Get the variable type
     char* var_type = get_var_type((yyvsp[0].str));
     
-    // Check if it's a valid type for address-of
     if (var_type) {
         if (strcmp(var_type, "INT") != 0 && 
             strcmp(var_type, "REAL") != 0 && 
@@ -3772,50 +3686,44 @@ yyreduce:
     
     (yyval.node) = create_node("&", 1, create_node((yyvsp[0].str), 0)); 
   }
-#line 3776 "parser.tab.c"
+#line 3690 "parser.tab.c"
     break;
 
-  case 103: /* expr: ADDR IDENTIFIER '[' expr ']'  */
-#line 1768 "parser.y"
+  case 104: /* expr: ADDR IDENTIFIER '[' expr ']'  */
+#line 1669 "parser.y"
                                  { 
     check_var_use((yyvsp[-3].str), yylineno);
-    
-    // Check if index is valid (integer)
+
     if (!is_int_expr((yyvsp[-1].node))) {
         array_index_error = 1;
         yyerror("Array index must be of integer type");
     }
-    
-    // Create array element node
+
     Node* arr_elem = create_node("ARRAY_ELEM", 2, create_node((yyvsp[-3].str), 0), (yyvsp[-1].node));
-    
-    // Create address-of node
+
     (yyval.node) = create_node("&", 1, arr_elem); 
   }
-#line 3796 "parser.tab.c"
+#line 3707 "parser.tab.c"
     break;
 
-  case 104: /* expr: ADDR '(' expr ')'  */
-#line 1783 "parser.y"
+  case 105: /* expr: ADDR '(' expr ')'  */
+#line 1681 "parser.y"
                       { 
-    // This should always produce an error
     yyerror("Cannot take address of an expression");
     (yyval.node) = create_node("ERROR", 0);
   }
-#line 3806 "parser.tab.c"
+#line 3716 "parser.tab.c"
     break;
 
-  case 105: /* expr: MUL '(' expr ')'  */
-#line 1788 "parser.y"
+  case 106: /* expr: MUL '(' expr ')'  */
+#line 1685 "parser.y"
                      { 
-    // Type checking - operand must be a pointer
     char* expr_type = get_expr_type((yyvsp[-1].node));
     
     if (expr_type) {
         if (strcmp(expr_type, "INT_PTR") != 0 && 
             strcmp(expr_type, "REAL_PTR") != 0 && 
             strcmp(expr_type, "CHAR_PTR") != 0) {
-            // Error: Can't dereference non-pointer
             dereference_type_error = 1;
             yyerror("Cannot dereference non-pointer expression");
         }
@@ -3823,68 +3731,61 @@ yyreduce:
     
     (yyval.node) = create_node("*", 1, (yyvsp[-1].node)); 
   }
-#line 3827 "parser.tab.c"
+#line 3735 "parser.tab.c"
     break;
 
-  case 106: /* expr: IDENTIFIER  */
-#line 1804 "parser.y"
+  case 107: /* expr: IDENTIFIER  */
+#line 1699 "parser.y"
                { 
     check_var_use((yyvsp[0].str), yylineno);
     (yyval.node) = create_node((yyvsp[0].str), 0); 
   }
-#line 3836 "parser.tab.c"
+#line 3744 "parser.tab.c"
     break;
 
-  case 107: /* expr: IDENTIFIER '(' args ')'  */
-#line 1808 "parser.y"
+  case 108: /* expr: IDENTIFIER '(' args ')'  */
+#line 1703 "parser.y"
                             { 
     int func_found = check_function_call((yyvsp[-3].str), yylineno);
-    
-    // Count arguments
+
     int arg_count = 0;
     if (strcmp((yyvsp[-1].node)->name, "ARGS NONE") != 0) {
         arg_count = (yyvsp[-1].node)->child_count;
     }
     
-    // Check parameter count even if function is not declared
     int required_count = get_function_param_count((yyvsp[-3].str));
     if (required_count >= 0 && required_count != arg_count) {
         param_count_mismatch = 1;
-        sprintf(yytext, "%s", (yyvsp[-3].str));  // Store function name for error
-        yylineno = (yylsp[-3]).first_line;   // Use the line number of function name token
+        sprintf(yytext, "%s", (yyvsp[-3].str)); 
+        yylineno = (yylsp[-3]).first_line;  
         yyerror("Parameter count mismatch");
     } 
     else if (!func_found) {
-        // Only trigger undeclared function error if param count was correct
         undeclared_function_error = 1;
         sprintf(yytext, "%s", (yyvsp[-3].str));
         yylineno = (yylsp[-3]).first_line;
         yyerror("Function called before declaration");
     }
     else {
-        // If function exists and param count is correct, check param types
         check_param_types((yyvsp[-3].str), (yyvsp[-1].node), yylineno);
     }
     
     (yyval.node) = create_node("CALL", 2, create_node((yyvsp[-3].str), 0), (yyvsp[-1].node)); 
   }
-#line 3872 "parser.tab.c"
+#line 3776 "parser.tab.c"
     break;
 
-  case 108: /* expr: IDENTIFIER '[' expr ']'  */
-#line 1839 "parser.y"
+  case 109: /* expr: IDENTIFIER '[' expr ']'  */
+#line 1730 "parser.y"
                             { 
     check_var_use((yyvsp[-3].str), yylineno);
-    
-    // Check if the index expression is a REAL literal or identifier
+
     if ((yyvsp[-1].node)->child_count == 0) {
-        // Check if it's a REAL literal
         if (strchr((yyvsp[-1].node)->name, '.')) {
             array_index_error = 1;
             yyerror("Array index must be of integer type");
         }
-        
-        // Check if it's a variable of type REAL
+
         char* var_type = get_var_type((yyvsp[-1].node)->name);
         if (var_type && strcmp(var_type, "REAL") == 0) {
             array_index_error = 1;
@@ -3892,7 +3793,6 @@ yyreduce:
         }
     }
     
-    // String expressions as array indices
     if (is_string_expr((yyvsp[-1].node))) {
         string_index_error = 1;
         yyerror("String expressions cannot be used as array indices");
@@ -3900,66 +3800,65 @@ yyreduce:
     
     (yyval.node) = create_node("ARRAY_ELEM", 2, create_node((yyvsp[-3].str), 0), (yyvsp[-1].node)); 
   }
-#line 3904 "parser.tab.c"
+#line 3804 "parser.tab.c"
     break;
 
-  case 109: /* expr: IDENTIFIER  */
-#line 1866 "parser.y"
+  case 110: /* expr: IDENTIFIER  */
+#line 1753 "parser.y"
                { 
     check_var_use((yyvsp[0].str), yylineno);
     (yyval.node) = create_node((yyvsp[0].str), 0); 
   }
-#line 3913 "parser.tab.c"
+#line 3813 "parser.tab.c"
     break;
 
-  case 110: /* expr: INT_LITERAL  */
-#line 1870 "parser.y"
+  case 111: /* expr: INT_LITERAL  */
+#line 1757 "parser.y"
                 { (yyval.node) = create_node((yyvsp[0].str), 0); }
-#line 3919 "parser.tab.c"
+#line 3819 "parser.tab.c"
     break;
 
-  case 111: /* expr: REAL_LITERAL  */
-#line 1871 "parser.y"
+  case 112: /* expr: REAL_LITERAL  */
+#line 1758 "parser.y"
                  { (yyval.node) = create_node((yyvsp[0].str), 0); }
-#line 3925 "parser.tab.c"
+#line 3825 "parser.tab.c"
     break;
 
-  case 112: /* expr: CHAR_LITERAL  */
-#line 1872 "parser.y"
+  case 113: /* expr: CHAR_LITERAL  */
+#line 1759 "parser.y"
                  { (yyval.node) = create_node((yyvsp[0].str), 0); }
-#line 3931 "parser.tab.c"
+#line 3831 "parser.tab.c"
     break;
 
-  case 113: /* expr: STRING_LITERAL  */
-#line 1873 "parser.y"
+  case 114: /* expr: STRING_LITERAL  */
+#line 1760 "parser.y"
                    { (yyval.node) = create_node((yyvsp[0].str), 0); }
-#line 3937 "parser.tab.c"
+#line 3837 "parser.tab.c"
     break;
 
-  case 114: /* expr: TRUE  */
-#line 1874 "parser.y"
+  case 115: /* expr: TRUE  */
+#line 1761 "parser.y"
          { (yyval.node) = create_node("TRUE", 0); }
-#line 3943 "parser.tab.c"
+#line 3843 "parser.tab.c"
     break;
 
-  case 115: /* expr: FALSE  */
-#line 1875 "parser.y"
+  case 116: /* expr: FALSE  */
+#line 1762 "parser.y"
           { (yyval.node) = create_node("FALSE", 0); }
-#line 3949 "parser.tab.c"
+#line 3849 "parser.tab.c"
     break;
 
-  case 116: /* expr: NULL_T  */
-#line 1876 "parser.y"
+  case 117: /* expr: NULL_T  */
+#line 1763 "parser.y"
            { (yyval.node) = create_node("NULL", 0); }
-#line 3955 "parser.tab.c"
+#line 3855 "parser.tab.c"
     break;
 
-  case 117: /* expr: PIPE_SYMBOL IDENTIFIER PIPE_SYMBOL  */
-#line 1877 "parser.y"
+  case 118: /* expr: PIPE_SYMBOL IDENTIFIER PIPE_SYMBOL  */
+#line 1764 "parser.y"
                                        { 
 	    check_var_use((yyvsp[-1].str), yylineno);
 	    
-	    // Type checking - the operand must be a string
 	    char* var_type = get_var_type((yyvsp[-1].str));
 	    if (var_type && strcmp(var_type, "STRING") != 0) {
 		length_type_error = 1;
@@ -3968,27 +3867,27 @@ yyreduce:
 	    
 	    (yyval.node) = create_node("LEN", 1, create_node((yyvsp[-1].str), 0)); 
   }
-#line 3972 "parser.tab.c"
+#line 3871 "parser.tab.c"
     break;
 
-  case 118: /* expr: '(' expr ADD expr ')' '[' expr ']'  */
-#line 1889 "parser.y"
+  case 119: /* expr: '(' expr ADD expr ')' '[' expr ']'  */
+#line 1775 "parser.y"
                                        {
     array_pointer_arithmetic_error = 1;
     yyerror("Cannot add anything to array elements - they are not pointers");
     (yyval.node) = create_node("ARRAY_ELEM", 3, (yyvsp[-6].node), (yyvsp[-4].node), (yyvsp[-1].node));
   }
-#line 3982 "parser.tab.c"
+#line 3881 "parser.tab.c"
     break;
 
-  case 119: /* args: expr  */
-#line 1898 "parser.y"
+  case 120: /* args: expr  */
+#line 1783 "parser.y"
          { (yyval.node) = create_node("ARGS", 1, (yyvsp[0].node)); }
-#line 3988 "parser.tab.c"
+#line 3887 "parser.tab.c"
     break;
 
-  case 120: /* args: expr ',' args  */
-#line 1899 "parser.y"
+  case 121: /* args: expr ',' args  */
+#line 1784 "parser.y"
                   {
       if (strcmp((yyvsp[0].node)->name, "ARGS") == 0) {
           Node* merged = create_node("ARGS", (yyvsp[0].node)->child_count + 1);
@@ -4000,17 +3899,17 @@ yyreduce:
           (yyval.node) = create_node("ARGS", 2, (yyvsp[-2].node), (yyvsp[0].node));
       }
   }
-#line 4004 "parser.tab.c"
+#line 3903 "parser.tab.c"
     break;
 
-  case 121: /* args: %empty  */
-#line 1910 "parser.y"
+  case 122: /* args: %empty  */
+#line 1795 "parser.y"
                 { (yyval.node) = create_node("ARGS NONE", 0); }
-#line 4010 "parser.tab.c"
+#line 3909 "parser.tab.c"
     break;
 
 
-#line 4014 "parser.tab.c"
+#line 3913 "parser.tab.c"
 
       default: break;
     }
@@ -4208,10 +4107,9 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 1913 "parser.y"
+#line 1798 "parser.y"
 
 
-/* הדפסת שגיאות יפות */
 void yyerror(const char* s) {
     if (comma_error) {
         printf("Syntax error at line %d: parameters must be separated by semicolon\n", yylineno);
@@ -4229,7 +4127,6 @@ void yyerror(const char* s) {
         printf("Syntax error at line %d: no type defined\n", yylineno);
         param_error = 0;
     }
-    
     
     else if (return_type_error) {
         printf("Semantic error at line %d: Return type mismatch\n", yylineno);
@@ -4340,7 +4237,6 @@ void yyerror(const char* s) {
     exit(1);
 }
 
-/* MAIN שמריץ את ה-parser */
 int main() {
     printf("Parsing completed successfully.\n");
     
@@ -4349,13 +4245,8 @@ int main() {
             fprintf(stderr, "Error: Program must have exactly one _main_() procedure\n");
             return 1;
         }
-
-        // Debug all variables
+        
         debug_print_all_vars();
-        //printf("Starting AST generation...\n");
-        //print_ast(root, 0); // הדפסת AST
-
-        // הוספה כאן — יצירת קוד ביניים
         printf("Generating 3AC...\n");
 	gen_code(root);
     }

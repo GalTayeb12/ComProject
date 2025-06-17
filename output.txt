@@ -1,59 +1,53 @@
 Parsing completed successfully.
-DEBUG: Registering function 'foo' with 2 parameters
-DEBUG: Registering function '_main_' with 0 parameters
-DEBUG: Argument 1 of function 'foo' - detected type: 'INT', expected type: 'INT'
-DEBUG: Argument 2 of function 'foo' - detected type: 'INT', expected type: 'INT'
+DEBUG: Registering function 'A1' with 1 parameters, return type: 'INT'
+DEBUG: Registering function '_main_' with 0 parameters, return type: 'none'
+DEBUG: Argument 1 of function 'A1' - detected type: 'REAL', expected type: 'REAL'
 DEBUG: All variables in current scope:
-Starting AST generation...
-(CODE
-  (FUNC
-    foo
-      (PARS
-        (par1 INT a)
-        (par2 INT b)
-      )
-      (INT)
-      (BODY
-        (BLOCK
-          (RET
-            (+ a b)
-          )
-        )
-      )
-  )
-  (FUNC
-    _main_
-      (PARS NONE)
-      (RET NONE)
-      (BODY
-        (BLOCK
-          (VAR_LIST
-            (INT c)
-            (INT d)
-          )
-        )
-        (BLOCK
-          (CALL
-            (foo)
-            (ARGS
-              (c)
-              (d)
-            )
-          )
-        )
-      )
-  )
-)
 Generating 3AC...
-foo:
-    BeginFunc 4
-    t0 = a + b
-    Return t0
+A1:
+    BeginFunc 47
+    t1 = 25
+    t2 = x1 != t1
+    if t2 == TRUE Goto L4
+    t3 = 2.89
+    t4 = c == t3
+    t0 = t4
+    Goto L5
+L4:
+    t0 = TRUE
+L5:
+    if t0 Goto L1
+    Goto L2
+L1:
+    t5 = 5
+    t6 = x1 - t5
+    x2 = t6
+    Goto L3
+L2:
+    t7 = 5
+    t8 = x1 + t7
+    x2 = t8
+L3:
+    t9 = x1 * x2
+    Return t9
     EndFunc
 _main_:
-    BeginFunc 12
-    PushParam d
-    PushParam c
-    t1 = LCall foo
+    BeginFunc 32
+    t10 = 5
+    a = t10
+    t11 = 0
+    aa = t11
+L6:
+    if a < 100 Goto L7
+    Goto L8
+L7:
+    t12 = 8.12
+    PushParam t12
+    t13 = LCall A1
     PopParams 8
+    aa = t13
+    t14 = aa + a
+    a = t14
+    Goto L6
+L8:
     EndFunc
